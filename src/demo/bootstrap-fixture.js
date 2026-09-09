@@ -1,4 +1,4 @@
-// Placeholder content for the foundation proof; no legacy material is migrated.
+// Milestone 1 compatibility fixture only. These names are not a production cast.
 export const bootstrapContent = {
   location: { id: 'HV_TOWN_SQUARE', name: 'HearthVale Town Square' },
   actors: [

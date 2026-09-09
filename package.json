@@ -6,6 +6,7 @@
   "exports": "./src/shell/index.js",
   "scripts": {
     "start": "node src/presentation/bootstrap.js",
+    "demo": "node src/presentation/six-pillar-demo.js",
     "test": "node --test"
   },
   "engines": { "node": ">=22" }

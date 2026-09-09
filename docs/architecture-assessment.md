@@ -1,6 +1,6 @@
 # HearthVale foundation assessment
 
-Milestone 1 can use LWE Core v0.1.0 without Core changes. This pass implements only the Shell bootstrap. Succession needs a generic controller mutation capability before Milestone 4; no workaround or Core modification is part of this pass.
+Milestones 1 and 2 use LWE Core v0.1.0 without Core changes. The original bootstrap assessment below remains the source mapping; [the Milestone 2 report](milestone-2-report.md) records the completed six-pillar fixture proof. Succession needs a generic controller mutation capability before Milestone 4; [the proposal](core-controller-transfer-gap.md) remains unimplemented.
 
 ## Sources and repository findings
 
@@ -8,7 +8,36 @@ Inspected Core at commit `2933f67` (`chore: prepare LWE Core v0.1.0`): its publi
 
 No AGENTS.md was found in the workspace. Core and the new HearthVale had clean Git working trees. The parent is a container, not a repository. The new HearthVale contained only README.md. Conventions are dependency-free JavaScript ES modules, Node >=22, and node:test. No hosting configuration or existing UI needs extending.
 
-The Master Design was not found by filename or Markdown/text references in this workspace. Do not infer its missing content. The newer Shell documents explicitly identify superseded AP, Pit, and weekly progression assumptions. Legacy inspection was limited to its README and package metadata: these describe an earlier LWE adapter/playtest despite the PreLWE directory name. Nothing is copied or imported from it.
+The [Master Design Handoff](HearthVale_Master_Design_Handoff.md) was supplied and read after the bootstrap assessment. It is authoritative for intended game, mechanics, tone, content direction, and prior design decisions wherever compatible with the newer contracts. Legacy inspection was limited to its README and package metadata: these describe an earlier LWE adapter/playtest despite the PreLWE directory name. Nothing is copied or imported from it.
+
+Apply this authority order, including when a lower-priority statement is labeled LOCKED:
+
+1. Current LWE Core contracts.
+2. HearthVale Shell Six Pillars Architecture.
+3. HearthVale Shell Architecture Contracts.
+4. HearthVale Master Design Handoff.
+5. Legacy HearthVale implementation.
+
+The handoff's historical continuation instructions (sections 87 and 90, post-combat rewards) do not replace the user's current Shell milestone scope. CURRENT/PROVISIONAL values remain provisional; TBD and LATER BOX entries do not authorize speculative implementation.
+
+### Master Design reconciliation
+
+Preserve its phone-first scripted-text generational life RPG direction: one evolving town and The Pit, meaningful relationships and legacy, dangerous low-number combat, preparation and player learning, weighted templates without a required runtime AI backend, and a richer inherited world rather than inherited maximum character power. Its five-day week, ten-day season, forty-day year, six stats (STR/DEX/CON/INT/WIS/CHA), spendable training XP, Hearts, duel combat, and other compatible mechanics remain design sources for their future milestones.
+
+| Handoff passage | Governing interpretation |
+| --- | --- |
+| 9.1: starting AP around 3–4; 14.4 and 87.12: maximum Sanity unresolved | Newer architecture supplies baseline Max AP 4 and Max Sanity 5; both may grow. Remaining growth/recovery formulas are not thereby decided. |
+| 9.3: possible extra AP for changing Strata | Superseded: the whole Pit expedition costs one AP, including ordinary internal movement across Strata. |
+| 17.2: pre-generation autosave and reload may produce different content | Exact snapshot restoration wins. Restore saved procedural state and deterministic RNG; do not reroll on load. A pre-generation checkpoint must resume generation consistently. Home/Waystone manual-save restrictions and Floor autosave direction can remain future UI policy at valid Core checkpoints; Chapter/succession boundary saves are also required. |
+| 45.2: every generated middle Stratum remains permanent in that save | Generation alone does not entitle unseen disposable Pit content to permanence. Preserve recognized permanent discoveries and meaningful causal history; eligible undiscovered procedural state may change at Chapter boundaries. |
+| 50.1: layered generator called a Core primitive; 8 and 87.56: shared rain signature | Use existing generic Core support where available. HearthVale content categories, generators, weather dates, and their meaning belong in Shell/content; these labels do not authorize Core additions. |
+| 59 and 62: NPC minimum/tier models; 63.4: refresh/reskin the cast as fallback | One Actor model governs every represented person, including the player. Personality/value/flaw may enrich content, but do not replace the required identity, attributes/resources, traits, one Main Goal, and controller. Compression must preserve meaningful world state, identities, history, and existing successors; no wholesale cast reset that violates continuity. |
+| 68.3: persistent NPC requests are separate; 70 and 87.30: rumor system | Separate content sources and presentation are valid. Requests/Guild work use Situations; rumors use Information. Do not create parallel causal quest or rumor engines. |
+| 51 and 87.27: world knowledge registry | Keep objective truth separate from Actor claims. Recognized permanent Pit discoveries have the newer shared-discovery exception; incidental/private Pit happenings do not become public automatically. |
+| 60–61 and 87.33: autonomous goal activity and cadence | Main Goals weight choices rather than guarantee activity. At most one meaningful off-screen accomplishment per Actor per Day; Week is reconciliation with no extra turn. Player Priority and the Situation-wide weekly contribution limit govern relevant opportunities. |
+| 7, 63, and 75–78: interludes, compression, successor types | Preserve compatible chronology and succession design, including variable gaps and mentorship. Use compressed historical resolution and transfer the controller within the continuing world. Do not replay skipped Days or rebuild an existing successor as a special player entity. |
+
+The bootstrap's `resolve` attribute and fixed names are explicit proof fixtures, not the canonical game stat roster or character generator. Adopt the handoff's six-stat model when implementing real mechanics. The separately designed production Content layer remains out of scope: Milestone 2 uses generic test IDs and parameters in `src/demo`, with no cast, quest catalog, stat balancing, or Legacy migration. The reported controller-transfer and history-compaction capability gaps remain unchanged.
 
 ## A. Actual public extension points
 
@@ -83,3 +112,9 @@ Core baseline verification: 56 tests passed before implementation. Broader gamep
 ## Milestone 1 result
 
 Implemented the file plan above. All 8 HearthVale integration tests and all 56 Core regression tests pass. The CLI successfully reports two Actors, one Human controller, Core boundary 1, Day 1, and a stable checkpoint. Tests verify the initialization Event/Consequence, Actor data, legitimate initial claims, unchanged AP/calendar during ordinary Scenes, exact save/reload and continued resolution, checkpoint/schema rejection, and runtime isolation. Import inspection confirms the single public Core dependency and no Legacy dependency. Git whitespace checking passed for the tracked diff; Core remains clean. No Core or Legacy files were changed.
+
+## Milestone 2 result
+
+The six-pillar proof adds causal help Situation creation/resolution, direct awareness, same-Day support and progress changes, player AP, protection and its expiry, a Situation-wide autonomous weekly contribution allowance, weighted daily goal/help/idle selection, and Day/Week completion. Daily decision markers and all temporary state survive exact reload, including between completed decision and calendar Scenes. Core still owns eligibility execution, selection, Events, Consequences, claims, lifecycle evaluation, and persistence. The fixed autonomous routing cohort is reconstructed from saved Actors; its decision hooks receive only Core's local projection.
+
+All 26 HearthVale tests (8 retained plus 18 new), 56 Core regressions, and both CLI smoke tests pass. The original bootstrap fixture moved from `src/content/bootstrap.js` to `src/demo/bootstrap-fixture.js`; production Content is not populated. No new Core gap or internal architecture conflict was found. See the milestone report for limitations and exact changed files. The foundation is ready for the minimal Milestone 3 Pit proof; production Content and succession remain deferred.
