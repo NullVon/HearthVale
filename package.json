@@ -1,0 +1,12 @@
+{
+  "name": "hearthvale-shell",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/shell/index.js",
+  "scripts": {
+    "start": "node src/presentation/bootstrap.js",
+    "test": "node --test"
+  },
+  "engines": { "node": ">=22" }
+}
