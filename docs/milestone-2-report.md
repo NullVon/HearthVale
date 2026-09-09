@@ -1,5 +1,7 @@
 # Milestone 2 six-pillar proof
 
+Current file paths below reflect the subsequent [repository reorganization](repository-reorganization.md). That move preserved this milestone's rules, fixture data, tests, and save behavior.
+
 Milestone 2 is complete using LWE Core v0.1.0 without Core changes. The proof uses replaceable test data, with no production Content design or Legacy migration. All 26 HearthVale tests and 56 Core regression tests pass; both diagnostic CLIs pass. The foundation is ready for Milestone 3's minimal Pit proof within its agreed scope. Succession remains blocked by the separate controller-transfer gap.
 
 ## Implemented flow
@@ -23,7 +25,7 @@ Autonomous help can never make a final contribution while protection is awaiting
 
 Shell infrastructure comprises the shared Actor constructor, help Situation factory, direct-awareness policy, eligibility/effects, minimal support Relation, decision hooks, Day/Week rules, and command adapter. This is a small interface for `location`, `additionalLocations`, `actors`, and `opportunities`; no scripting language, formula parser, or generic content registry was added.
 
-`src/demo/six-pillar-fixture.js` supplies generic test IDs, zero-valued test attributes, weights, contribution thresholds, and protection duration. These values prove behavior and are not balance decisions. `src/demo/bootstrap-fixture.js` preserves the accepted Milestone 1 fixture and IDs for compatibility; its old names remain noncanonical. It was moved out of `src/content`. Production Content has not been populated. Test-only variants add a remote location or a third Actor to exercise visibility and the shared weekly limit.
+`HearthVale_Shell/fixtures/six-pillar-fixture.js` supplies generic test IDs, zero-valued test attributes, weights, contribution thresholds, and protection duration. These values prove behavior and are not balance decisions. `HearthVale_Shell/fixtures/bootstrap-fixture.js` preserves the accepted Milestone 1 fixture and IDs for compatibility; its old names remain noncanonical. It was moved out of `src/content`. Production Content has not been populated. Test-only variants add a remote location or a third Actor to exercise visibility and the shared weekly limit.
 
 The support count is a minimal Actor-to-Actor state proof, not affection, relationship stages, or production social balancing. Likewise, goalProgress proves one weighted accomplishment rather than implementing a goal catalog or NPC planner.
 
@@ -31,16 +33,16 @@ The support count is a minimal Actor-to-Actor state proof, not affection, relati
 
 | Files | Purpose |
 | --- | --- |
-| `src/shell/actions.js` (new) | Help eligibility, effects, direct contribution perception |
-| `src/shell/situations.js` (new) | Situation construction, priority/awareness/expiry, support IDs |
-| `src/shell/progression.js` (new) | Day commands, daily markers, goal/idle outcomes, Week reconciliation |
-| `src/shell/autonomy.js` (new) | Local candidates and opaque weighted desires for Core selection |
-| `src/shell/game.js` (new) | Player commands and checkpoint-safe Day orchestration |
-| `src/shell/index.js` (changed) | Compose hooks, causal Situation creation, restore saved cohort |
-| `src/shell/actors.js`, `src/shell/world.js` (changed) | Minimal fixture parameters, weight validation, initial progression state |
-| `src/content/bootstrap.js` → `src/demo/bootstrap-fixture.js` (moved) | Isolate accepted bootstrap fixture from production Content |
-| `src/demo/six-pillar-fixture.js` (new) | Replaceable two-Actor test definition |
-| `src/presentation/six-pillar-demo.js` (new) | Executable complete-loop diagnostic |
+| `HearthVale_Shell/src/actions.js` (new) | Help eligibility, effects, direct contribution perception |
+| `HearthVale_Shell/src/situations.js` (new) | Situation construction, priority/awareness/expiry, support IDs |
+| `HearthVale_Shell/src/progression.js` (new) | Day commands, daily markers, goal/idle outcomes, Week reconciliation |
+| `HearthVale_Shell/src/autonomy.js` (new) | Local candidates and opaque weighted desires for Core selection |
+| `HearthVale_Shell/src/game.js` (new) | Player commands and checkpoint-safe Day orchestration |
+| `HearthVale_Shell/src/index.js` (changed) | Compose hooks, causal Situation creation, restore saved cohort |
+| `HearthVale_Shell/src/actors.js`, `HearthVale_Shell/src/world.js` (changed) | Minimal fixture parameters, weight validation, initial progression state |
+| `src/content/bootstrap.js` → `HearthVale_Shell/fixtures/bootstrap-fixture.js` (moved) | Isolate accepted bootstrap fixture from production Content |
+| `HearthVale_Shell/fixtures/six-pillar-fixture.js` (new) | Replaceable two-Actor test definition |
+| `HearthVale_Shell/cli/six-pillar-demo.js` (new) | Executable complete-loop diagnostic |
 | `tests/six-pillars.test.js` (new) | 18 focused integration tests |
 | `package.json`, `README.md` (changed) | Demo command, API examples, current scope |
 | `docs/architecture-assessment.md` (updated) | Current milestone status, unchanged authority hierarchy |
@@ -53,7 +55,7 @@ The user-supplied Master Design and Word architecture files were not modified. E
 
 `node --test` in HearthVale: **26 passed, 0 failed** (8 bootstrap tests retained, 18 new tests). New coverage includes causal creation and resolution, legitimate visibility and hidden requests, foreign evidence rejection, same-Day progress/support, AP denial/free actions, protected final contributions, protection expiry without failure, Situation-wide weekly caps across multiple Actors and reloads, daily caps and stale commands, idle/zero weights, both seeded weighted outcomes, local-only decisions, exact active/resolved saves and continuation, mid-transition saves, replaceable definitions, and malformed command recovery.
 
-`node --test` in LWE-Core: **56 passed, 0 failed**. Both `node src/presentation/bootstrap.js` and `node src/presentation/six-pillar-demo.js` succeeded. Source import inspection retains exactly one external Core import at `src/shell/core.js`, using the public entry point, with no Legacy imports.
+`node --test` in LWE-Core: **56 passed, 0 failed**. Both `node HearthVale_Shell/cli/bootstrap.js` and `node HearthVale_Shell/cli/six-pillar-demo.js` succeeded. Source import inspection retains exactly one external Core import at `HearthVale_Shell/src/core.js`, using the public entry point, with no Legacy imports.
 
 ## Architecture limits and next milestone
 

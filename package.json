@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": "./src/shell/index.js",
+  "exports": "./HearthVale_Shell/src/index.js",
   "scripts": {
-    "start": "node src/presentation/bootstrap.js",
-    "demo": "node src/presentation/six-pillar-demo.js",
+    "start": "node HearthVale_Shell/cli/bootstrap.js",
+    "demo": "node HearthVale_Shell/cli/six-pillar-demo.js",
     "test": "node --test"
   },
   "engines": { "node": ">=22" }

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createHearthValeRuntime } from '../src/shell/index.js';
-import { createActor } from '../src/shell/actors.js';
+import { createHearthValeRuntime } from '../HearthVale_Shell/src/index.js';
+import { createActor } from '../HearthVale_Shell/src/actors.js';
 
 test('Shell loads through Core and resolves its initial Scene through Event and Consequence', () => {
   const runtime = createHearthValeRuntime();

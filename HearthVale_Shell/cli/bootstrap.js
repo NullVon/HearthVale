@@ -1,4 +1,4 @@
-import { createHearthValeRuntime } from '../shell/index.js';
+import { createHearthValeRuntime } from '../src/index.js';
 
 const runtime = createHearthValeRuntime();
 const state = runtime.snapshot();

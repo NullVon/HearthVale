@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createHearthValeGame, createHearthValeRuntime } from '../src/shell/index.js';
-import { HELP } from '../src/shell/actions.js';
-import { supportRelationId } from '../src/shell/situations.js';
-import { BEGIN_DAY_END, FINISH_DAY_END, PROGRESS_GOAL } from '../src/shell/progression.js';
-import { availableActions, choices, desires } from '../src/shell/autonomy.js';
-import { sixPillarFixture, demoIds as ids } from '../src/demo/six-pillar-fixture.js';
+import { createHearthValeGame, createHearthValeRuntime } from '../HearthVale_Shell/src/index.js';
+import { HELP } from '../HearthVale_Shell/src/actions.js';
+import { supportRelationId } from '../HearthVale_Shell/src/situations.js';
+import { BEGIN_DAY_END, FINISH_DAY_END, PROGRESS_GOAL } from '../HearthVale_Shell/src/progression.js';
+import { availableActions, choices, desires } from '../HearthVale_Shell/src/autonomy.js';
+import { sixPillarFixture, demoIds as ids } from '../HearthVale_Shell/fixtures/six-pillar-fixture.js';
 
 function fixture(weights = { goal: 1, help: 1, idle: 1 }, opportunity = {}) {
   const definition = sixPillarFixture();

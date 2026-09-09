@@ -2,20 +2,40 @@
 
 The clean HearthVale LWE Shell. Milestones 1 and 2 prove bootstrap and a six-pillar causal loop with unified Actors, a protected help Situation, legitimate awareness, immediate consequences, a minimal support Relation, Day/Week progression, weighted autonomy, and exact saves. All content is replaceable test/demo data; no production game content is implemented.
 
+Repository layout:
+
+```text
+HearthVale/
+├── HearthVale_Shell/
+│   ├── src/          # current Shell rules and Core adapter
+│   ├── fixtures/     # replaceable bootstrap and six-pillar demo data
+│   └── cli/          # Shell diagnostics, not production UI
+├── HearthVale_Content/  # future production Content (.gitkeep only)
+├── HearthVale_Story/    # future authored narrative (.gitkeep only)
+├── HearthVale_UI/       # future presentation (.gitkeep only)
+├── docs/               # architecture, design, and reports
+├── tests/              # shared integration tests
+├── package.json        # repository-level scripts and package entry point
+├── README.md
+└── .git/
+```
+
+The diagnostic CLIs and fixtures accompany the Shell proof. Production Content, Story, and UI remain separately designed layers with no implementation yet. See [the reorganization report](docs/repository-reorganization.md) for the move inventory and verification.
+
 Requires Node.js >=22 and the sibling `../LWE-Core` repository at v0.1.0 (inspected commit `2933f67`). Run from this directory; no package installation is needed:
 
 ```sh
-node src/presentation/bootstrap.js
-node src/presentation/six-pillar-demo.js
+node HearthVale_Shell/cli/bootstrap.js
+node HearthVale_Shell/cli/six-pillar-demo.js
 node --test
 ```
 
 `npm start`, `npm run demo`, and `npm test` are equivalent. Run Core regression tests with `node --test` from `../LWE-Core`.
 
 ```js
-import { createHearthValeGame } from './src/shell/index.js';
-import { sixPillarFixture, demoIds } from './src/demo/six-pillar-fixture.js';
-import { HELP } from './src/shell/actions.js';
+import { createHearthValeGame } from './HearthVale_Shell/src/index.js';
+import { sixPillarFixture, demoIds } from './HearthVale_Shell/fixtures/six-pillar-fixture.js';
+import { HELP } from './HearthVale_Shell/src/actions.js';
 
 const game = createHearthValeGame({ definition: sixPillarFixture(), seed: 1 });
 game.perform({ type: HELP, situation: demoIds.situation });
@@ -26,7 +46,7 @@ const restored = createHearthValeGame({ saved });
 console.log(restored.view(demoIds.player)); // Actor knowledge, not objective truth
 ```
 
-`src/shell/core.js` is the only external Core import and uses its documented public entry point. `src/shell` owns rules, `src/demo` isolates all temporary fixtures, and `src/presentation` contains diagnostic CLIs. `createHearthValeRuntime` still exposes the raw Core development interface; `createHearthValeGame` provides player commands. Objective snapshots are for adjudication/inspection, not an omniscient player UI.
+`HearthVale_Shell/src/core.js` is the only external Core import and uses its documented public entry point. `HearthVale_Shell/src` owns rules, `HearthVale_Shell/fixtures` isolates all temporary fixtures, and `HearthVale_Shell/cli` contains diagnostic CLIs. `createHearthValeRuntime` still exposes the raw Core development interface; `createHearthValeGame` provides player commands. Objective snapshots are for adjudication/inspection, not an omniscient player UI.
 
 Actor identity, base stats, traits, resources, and one Main Goal live in Core Entity data. Player maps to Core `Human`; other Actors use `Autonomous`. AP 4 and Sanity 5 are initial maxima, not immutable caps. Autonomous Actors share the schema but do not spend player AP. Permanent/living/ephemeral policy is Shell data, separate from Core active/retired lifecycle.
 

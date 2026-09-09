@@ -1,5 +1,7 @@
 # HearthVale foundation assessment
 
+Repository paths below reflect the [structural reorganization](repository-reorganization.md): rules, test fixtures, and diagnostic CLIs now live under `HearthVale_Shell`; documentation and shared integration tests remain at the repository root. Future Content, Story, and UI layers are empty placeholders.
+
 Milestones 1 and 2 use LWE Core v0.1.0 without Core changes. The original bootstrap assessment below remains the source mapping; [the Milestone 2 report](milestone-2-report.md) records the completed six-pillar fixture proof. Succession needs a generic controller mutation capability before Milestone 4; [the proposal](core-controller-transfer-gap.md) remains unimplemented.
 
 ## Sources and repository findings
@@ -37,7 +39,7 @@ Preserve its phone-first scripted-text generational life RPG direction: one evol
 | 60–61 and 87.33: autonomous goal activity and cadence | Main Goals weight choices rather than guarantee activity. At most one meaningful off-screen accomplishment per Actor per Day; Week is reconciliation with no extra turn. Player Priority and the Situation-wide weekly contribution limit govern relevant opportunities. |
 | 7, 63, and 75–78: interludes, compression, successor types | Preserve compatible chronology and succession design, including variable gaps and mentorship. Use compressed historical resolution and transfer the controller within the continuing world. Do not replay skipped Days or rebuild an existing successor as a special player entity. |
 
-The bootstrap's `resolve` attribute and fixed names are explicit proof fixtures, not the canonical game stat roster or character generator. Adopt the handoff's six-stat model when implementing real mechanics. The separately designed production Content layer remains out of scope: Milestone 2 uses generic test IDs and parameters in `src/demo`, with no cast, quest catalog, stat balancing, or Legacy migration. The reported controller-transfer and history-compaction capability gaps remain unchanged.
+The bootstrap's `resolve` attribute and fixed names are explicit proof fixtures, not the canonical game stat roster or character generator. Adopt the handoff's six-stat model when implementing real mechanics. The separately designed production Content layer remains out of scope: Milestone 2 uses generic test IDs and parameters in `HearthVale_Shell/fixtures`, with no cast, quest catalog, stat balancing, or Legacy migration. The reported controller-transfer and history-compaction capability gaps remain unchanged.
 
 ## A. Actual public extension points
 
@@ -53,12 +55,12 @@ Create these files under HearthVale, and update its existing README.md:
 
 ```text
 package.json                        ESM metadata, test and bootstrap commands
-src/shell/core.js                    sole external Core import
-src/shell/actors.js                  unified Actor construction and semantic checks
-src/shell/world.js                   content-to-Core bootstrap records
-src/shell/index.js                   Shell hooks and runtime composition
-src/content/bootstrap.js            two placeholder people and one location
-src/presentation/bootstrap.js        command-line bootstrap inspection
+HearthVale_Shell/src/core.js                    sole external Core import
+HearthVale_Shell/src/actors.js                  unified Actor construction and semantic checks
+HearthVale_Shell/src/world.js                   content-to-Core bootstrap records
+HearthVale_Shell/src/index.js                   Shell hooks and runtime composition
+HearthVale_Shell/fixtures/bootstrap-fixture.js  two placeholder people and one location
+HearthVale_Shell/cli/bootstrap.js        command-line bootstrap inspection
 tests/bootstrap.test.js              focused integration and boundary checks
 docs/architecture-assessment.md      this assessment and milestone plan
 README.md                           run instructions and scope
@@ -117,4 +119,4 @@ Implemented the file plan above. All 8 HearthVale integration tests and all 56 C
 
 The six-pillar proof adds causal help Situation creation/resolution, direct awareness, same-Day support and progress changes, player AP, protection and its expiry, a Situation-wide autonomous weekly contribution allowance, weighted daily goal/help/idle selection, and Day/Week completion. Daily decision markers and all temporary state survive exact reload, including between completed decision and calendar Scenes. Core still owns eligibility execution, selection, Events, Consequences, claims, lifecycle evaluation, and persistence. The fixed autonomous routing cohort is reconstructed from saved Actors; its decision hooks receive only Core's local projection.
 
-All 26 HearthVale tests (8 retained plus 18 new), 56 Core regressions, and both CLI smoke tests pass. The original bootstrap fixture moved from `src/content/bootstrap.js` to `src/demo/bootstrap-fixture.js`; production Content is not populated. No new Core gap or internal architecture conflict was found. See the milestone report for limitations and exact changed files. The foundation is ready for the minimal Milestone 3 Pit proof; production Content and succession remain deferred.
+All 26 HearthVale tests (8 retained plus 18 new), 56 Core regressions, and both CLI smoke tests pass. The original bootstrap fixture moved from `src/content/bootstrap.js` to `HearthVale_Shell/fixtures/bootstrap-fixture.js`; production Content is not populated. No new Core gap or internal architecture conflict was found. See the milestone report for limitations and exact changed files. The foundation is ready for the minimal Milestone 3 Pit proof; production Content and succession remain deferred.

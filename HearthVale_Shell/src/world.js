@@ -1,4 +1,4 @@
-import { bootstrapContent } from '../demo/bootstrap-fixture.js';
+import { bootstrapContent } from '../fixtures/bootstrap-fixture.js';
 import { createActor } from './actors.js';
 import { makeHelpSituation } from './situations.js';
 

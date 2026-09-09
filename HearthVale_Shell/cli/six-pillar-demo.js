@@ -1,6 +1,6 @@
-import { createHearthValeGame } from '../shell/index.js';
-import { HELP } from '../shell/actions.js';
-import { sixPillarFixture, demoIds } from '../demo/six-pillar-fixture.js';
+import { createHearthValeGame } from '../src/index.js';
+import { HELP } from '../src/actions.js';
+import { sixPillarFixture, demoIds } from '../fixtures/six-pillar-fixture.js';
 
 const game = createHearthValeGame({ definition: sixPillarFixture(), seed: 1 });
 console.log('Six-pillar proof using test fixtures only.');
