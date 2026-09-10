@@ -1,6 +1,6 @@
 # HearthVale
 
-The clean HearthVale LWE Shell. Milestones 1–3 prove bootstrap, a six-pillar causal loop, and a minimal persistent Pit expedition with immediate permanent discovery and exact saves. All content is replaceable test/demo data; no production game content is implemented.
+The clean HearthVale LWE Shell. Milestones 1–4 prove bootstrap, a six-pillar causal loop, persistent Pit expeditions, existing-Actor succession, bounded historical advancement, and exact saves. All content is replaceable test/demo data; no production game content is implemented.
 
 Repository layout:
 
@@ -8,7 +8,7 @@ Repository layout:
 HearthVale/
 ├── HearthVale_Shell/
 │   ├── src/          # current Shell rules and Core adapter
-│   ├── fixtures/     # replaceable bootstrap, six-pillar, and Pit demo data
+│   ├── fixtures/     # replaceable bootstrap, six-pillar, Pit, and succession data
 │   └── cli/          # Shell diagnostics, not production UI
 ├── HearthVale_Content/  # future production Content (.gitkeep only)
 ├── HearthVale_Story/    # future authored narrative (.gitkeep only)
@@ -28,10 +28,11 @@ Requires Node.js >=22 and the sibling `../LWE-Core` repository at v0.1.0 (inspec
 node HearthVale_Shell/cli/bootstrap.js
 node HearthVale_Shell/cli/six-pillar-demo.js
 node HearthVale_Shell/cli/pit-demo.js
+node HearthVale_Shell/cli/succession-demo.js
 node --test
 ```
 
-`npm start`, `npm run demo`, `npm run demo:pit`, and `npm test` are equivalent. Run Core regression tests with `node --test` from `../LWE-Core`.
+`npm start`, `npm run demo`, `npm run demo:pit`, `npm run demo:succession`, and `npm test` are equivalent. Run Core regression tests with `node --test` from `../LWE-Core`. Succession requires the accepted generic controller-transfer addition to Core; the original tagged v0.1.0 alone does not provide that operation.
 
 ```js
 import { createHearthValeGame } from './HearthVale_Shell/src/index.js';
@@ -59,8 +60,12 @@ The Pit fixture supports `hearthvale.enter-pit`, `hearthvale.advance-pit`, `hear
 
 `game.sharedDiscoveries()` exposes recognized permanent discoveries only. Local expedition claims remain Actor knowledge. The deterministic reconstruction helper is test scheduling infrastructure: it replaces undiscovered ephemeral space while retaining the permanent location and causal history. It is not a player command, Chapter generator, or shortcut system.
 
-See [the Milestone 3 report](docs/milestone-3-report.md) for the Pit flow, files, 38 HearthVale tests, and limits; [the Milestone 2 report](docs/milestone-2-report.md) records the earlier causal loop. The [architecture assessment](docs/architecture-assessment.md) records authority and implementation order. The separately authorized [controller-transfer review](docs/core-controller-transfer-gap.md) resolved the generic Core gap with an unreleased causal operation. Succession remains unimplemented; Milestone 4 must integrate Shell eligibility, opportunity selection, and refreshed autonomous routing.
+See [the Milestone 3 report](docs/milestone-3-report.md) for the earlier Pit proof and [the Milestone 2 report](docs/milestone-2-report.md) for the causal loop. The [architecture assessment](docs/architecture-assessment.md) records authority and implementation order. The separately authorized [controller-transfer review](docs/core-controller-transfer-gap.md) resolved the generic Core gap; Milestone 4 now integrates that operation with Shell eligibility, explicit opportunity selection, and refreshed autonomous routing.
 
 The [Master Design Handoff](docs/HearthVale_Master_Design_Handoff.md) governs intended game, mechanics, tone, content direction, and prior design decisions. Authority order is current Core contracts → Shell Six Pillars Architecture → Shell Architecture Contracts → Master Design Handoff → Legacy. A lower-priority LOCKED label never overrides newer architecture. The assessment records specific conflicts and their governing interpretations; bootstrap attributes and names remain proof fixtures.
 
 The parent directory is a workspace container. `LWE-Core` and `HearthVale_Legacy_PreLWE` are separate repositories and were not modified. Legacy remains reference-only with no runtime dependency or migrated content.
+
+Milestone 4 integrates the accepted Core operation without further Core edits. With `successionFixture({ years: 0 })` (or `years: 3` for the historical proof), call `game.successionOptions()`, then `game.beginSuccession(actorId)`. Store its returned `preSuccessionSave` and/or `preparedSave` in the caller's persistence layer. Call `game.completeSuccession()` to continue with the existing successor. The adapter refreshes autonomous routing; the old player becomes Autonomous. Personal and public Situations remain intact; only explicitly marked player-role recipients transfer. Unclassified important recipients block preparation until a Shell routing policy is defined.
+
+All 47 HearthVale tests and 64 Core tests pass. See [the Milestone 4 report](docs/milestone-4-report.md) for the complete file inventory, verified continuity, save boundaries, and limits. The minimal Milestones 1–4 engineering foundation is complete; production systems and content remain separate work.

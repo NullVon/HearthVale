@@ -2,10 +2,12 @@ import { bootstrapContent } from '../fixtures/bootstrap-fixture.js';
 import { createActor } from './actors.js';
 import { makeHelpSituation } from './situations.js';
 import { createPit } from './pit.js';
+import { successionEntities } from './succession.js';
 
 export function createWorld(definition = bootstrapContent) {
   const { location, actors, opportunities = [], additionalLocations = [] } = definition;
   const people = actors.map(actor => createActor(actor, actor.location ?? location.id));
+  const succession = successionEntities(definition.succession, people);
   if (people.filter(actor => actor.actor.controller === 'Human').length !== 1) {
     throw new Error('A HearthVale world requires exactly one Player Controller');
   }
@@ -21,6 +23,7 @@ export function createWorld(definition = bootstrapContent) {
       { id: location.id, type: 'hearthvale.location', lifecycle: 'active', data: { name: location.name, persistence: 'permanent' } },
       ...additionalLocations.map(place => ({ id: place.id, type: 'hearthvale.location', data: { name: place.name, persistence: 'permanent' } })),
       ...people,
+      ...succession,
       ...(definition.pit ? [createPit(definition.pit, location.id)] : []),
     ],
     globals: {
@@ -29,6 +32,7 @@ export function createWorld(definition = bootstrapContent) {
         progression: { phase: 'active' }, opportunityDefinitions: structuredClone(opportunities),
       },
       hearthvaleWeekly: { persistence: 'ephemeral', week: 1, reconciliations: 0 },
+      ...(definition.succession ? { hearthvaleSuccession: { definition: structuredClone(definition.succession), pending: null, completed: 0 } } : {}),
     },
   };
 }

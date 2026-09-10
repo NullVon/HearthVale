@@ -5,13 +5,19 @@ import { HELP, helpAction, helpPerceptions } from './actions.js';
 import { progressionActions, autonomousActors } from './progression.js';
 import { availableActions, desires, choices } from './autonomy.js';
 import { activeExpedition, pitActions, pitReturnEvents, pitPerceptions, pitAvailable, pitMoveAllowed } from './pit.js';
+import { successionActions, successionPerceptions, pendingSuccession, COMPLETE_SUCCESSION } from './succession.js';
 
 export function createHearthValeShell({ autonomousIds = [] } = {}) {
   // Fixed cohort for this milestone; restore derives it from saved Actors.
   // This immutable routing list supplies no world knowledge to decision hooks.
   const roster = Object.freeze([...new Set(autonomousIds)]);
+  const actions = { ...progressionActions, [HELP]: helpAction, ...pitActions, ...successionActions,
+    Move: { eligible: pitMoveAllowed }, Take: {}, Give: {}, Communicate: {}, Interact: {}, Wait: {} };
   return Object.freeze({
-    actions: { ...progressionActions, [HELP]: helpAction, ...pitActions, Move: { eligible: pitMoveAllowed } },
+    actions: Object.fromEntries(Object.entries(actions).map(([type, action]) => [type, { ...action,
+      eligible: context => (!pendingSuccession(context.world) || type === COMPLETE_SUCCESSION)
+        && (action.eligible ? action.eligible(context) : true),
+    }])),
     worldProcesses: ({ world }) => {
       if (world.globals.hearthvale.initialized) {
         return activeExpedition(world) ? [] : [...pitReturnEvents(world), ...expiredPriorityEvents(world)];
@@ -35,7 +41,7 @@ export function createHearthValeShell({ autonomousIds = [] } = {}) {
     perceive: context => [...(context.event.event.type === 'hearthvale.world-started'
       ? Object.values(context.world.entities).filter(entity => entity.actor).map(actor => ({
         actor: actor.id, claim: { subject: actor.id, key: 'primaryLocation', value: actor.primaryLocation },
-      })) : helpPerceptions(context)), ...pitPerceptions(context)],
+      })) : helpPerceptions(context)), ...pitPerceptions(context), ...successionPerceptions(context)],
     surfaceOpportunity: context => !activeExpedition(context.world) && surfaceHelp(context),
     consequences: priorityConsequences,
     available: context => [...availableActions(context), ...pitAvailable(context)],

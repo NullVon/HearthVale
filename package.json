@@ -8,6 +8,7 @@
     "start": "node HearthVale_Shell/cli/bootstrap.js",
     "demo": "node HearthVale_Shell/cli/six-pillar-demo.js",
     "demo:pit": "node HearthVale_Shell/cli/pit-demo.js",
+    "demo:succession": "node HearthVale_Shell/cli/succession-demo.js",
     "test": "node --test"
   },
   "engines": { "node": ">=22" }

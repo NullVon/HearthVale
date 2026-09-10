@@ -1,5 +1,7 @@
 # Core controller transfer proposal
 
+Milestone 4 integration update: the [succession proof](milestone-4-report.md) now consumes this operation, preserves world continuity, and refreshes routing at the adapter boundary. The original review below predates that integration. Core required no further changes; all 47 HearthVale and 64 Core tests pass.
+
 Status: resolved by the separately authorized generic Core review after Milestone 3. Core now implements the unreleased `controller-transfer` Consequence; see [the operation contract](../../LWE-Core/docs/controller-transfer.md). The proposal below is retained as the original gap analysis. HearthVale succession has not been implemented.
 
 ## Reviewed result

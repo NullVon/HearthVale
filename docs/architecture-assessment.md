@@ -1,5 +1,7 @@
 # HearthVale foundation assessment
 
+Milestone 4 update: [succession and continuity are now proven](milestone-4-report.md) using the accepted Core operation with no further Core changes. All 47 HearthVale tests, 64 Core regressions, and four diagnostic CLIs pass. The statements below about deferred succession are historical milestone assessments; the current implementation includes prepared checkpoints, immediate and compressed succession, scoped recipient selection, and post-transfer routing refresh. Production Content/Story/UI remain unimplemented.
+
 Post-Milestone 3 update: the separately authorized [controller-transfer review](core-controller-transfer-gap.md) confirmed and resolved the generic controller/opportunity-transfer gap in unreleased Core changes. All 64 Core tests and 38 unchanged HearthVale tests pass. The historical assessments below describe the gap at their original milestones. Milestone 4 is now unblocked on that capability; succession itself remains unimplemented, and Shell routing must be refreshed when control changes.
 
 Repository paths below reflect the [structural reorganization](repository-reorganization.md): rules, test fixtures, and diagnostic CLIs now live under `HearthVale_Shell`; documentation and shared integration tests remain at the repository root. Future Content, Story, and UI layers are empty placeholders.

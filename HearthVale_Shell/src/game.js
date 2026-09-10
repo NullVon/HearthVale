@@ -1,6 +1,7 @@
 import { createHearthValeRuntime } from './index.js';
 import { BEGIN_DAY_END, FINISH_DAY_END, autonomousActors } from './progression.js';
 import { activeExpedition } from './pit.js';
+import { PREPARE_SUCCESSION, COMPLETE_SUCCESSION, pendingSuccession, successorOptions } from './succession.js';
 
 // Thin command adapter: Core remains the only simulation and persistence engine.
 export function createHearthValeGame(options = {}) {
@@ -15,6 +16,12 @@ export function createHearthValeGame(options = {}) {
       for (const attempt of attempts) runtime.submit(attempt);
       const result = runtime.resolveScene({ offscreenBudget: offscreen ? autonomousActors(current).length : 0 });
       if (result.phase !== 'stabilized') throw new Error('Command exceeded its causal budget');
+      // Refresh immutable routing after control changes, using only public checkpoints.
+      const roster = state => Object.values(state.entities).filter(e => e.actor && e.lifecycle === 'active')
+        .map(e => [e.id, e.actor.controller]);
+      if (JSON.stringify(roster(current)) !== JSON.stringify(roster(world()))) {
+        runtime = createHearthValeRuntime({ saved: runtime.save() });
+      }
       return result;
     } catch (error) {
       // A malformed command must not strand presentation in an open Core Scene.
@@ -24,6 +31,7 @@ export function createHearthValeGame(options = {}) {
     }
   }
   function beginDayEnd() {
+    if (pendingSuccession(world())) throw new Error('Complete prepared succession before ending the Day');
     if (activeExpedition(world())) throw new Error('Return from the Pit before ending the Day');
     const current = world().globals.hearthvale;
     if ((current.progression?.phase ?? 'active') !== 'active') throw new Error('Day is already closing');
@@ -41,11 +49,31 @@ export function createHearthValeGame(options = {}) {
     .map(name => [name, (...args) => runtime[name](...args)]));
   return Object.freeze({
     perform: input => {
+      if (pendingSuccession(world())) throw new Error('Complete prepared succession before player Actions');
       if ((world().globals.hearthvale.progression?.phase ?? 'active') !== 'active') throw new Error('Finish Day completion before player Actions');
+      if ([PREPARE_SUCCESSION, COMPLETE_SUCCESSION].includes(input.type)) throw new Error('Use the explicit succession commands');
       if ([BEGIN_DAY_END, FINISH_DAY_END].includes(input.type)) throw new Error('Use the explicit Day commands');
       return scene([{ ...input, actor: playerId() }]);
     },
     beginDayEnd,
+    successionOptions: () => successorOptions(world(), playerId()).filter(candidate => runtime.view(playerId())
+      .some(c => c.claim.subject === candidate.actor && c.claim.key === 'succession-option')),
+    beginSuccession: successor => {
+      const from = playerId();
+      if (!successorOptions(world(), from).some(c => c.actor === successor)
+        || !runtime.view(from).some(c => c.claim.subject === successor && c.claim.key === 'succession-option')) {
+        throw new Error('Successor is ineligible or succession timing/routing is not valid');
+      }
+      const preSuccessionSave = runtime.save();
+      scene([{ actor: from, type: PREPARE_SUCCESSION, targets: [successor] }]);
+      return Object.freeze({ preSuccessionSave, preparedSave: runtime.save() });
+    },
+    completeSuccession: () => {
+      if (!pendingSuccession(world())) throw new Error('No prepared succession');
+      const result = scene([{ actor: playerId(), type: COMPLETE_SUCCESSION }]);
+      if (pendingSuccession(world())) throw new Error('Prepared succession is no longer valid');
+      return result;
+    },
     finishDayEnd,
     endDay: () => {
       if ((world().globals.hearthvale.progression?.phase ?? 'active') === 'active') beginDayEnd();
