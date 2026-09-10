@@ -1,5 +1,7 @@
 # HearthVale foundation assessment
 
+Post-Milestone 3 update: the separately authorized [controller-transfer review](core-controller-transfer-gap.md) confirmed and resolved the generic controller/opportunity-transfer gap in unreleased Core changes. All 64 Core tests and 38 unchanged HearthVale tests pass. The historical assessments below describe the gap at their original milestones. Milestone 4 is now unblocked on that capability; succession itself remains unimplemented, and Shell routing must be refreshed when control changes.
+
 Repository paths below reflect the [structural reorganization](repository-reorganization.md): rules, test fixtures, and diagnostic CLIs now live under `HearthVale_Shell`; documentation and shared integration tests remain at the repository root. Future Content, Story, and UI layers are empty placeholders.
 
 Milestones 1–3 use LWE Core v0.1.0 without Core changes. The original bootstrap assessment below remains the source mapping; [the Milestone 2 report](milestone-2-report.md) records the completed six-pillar fixture proof and [the Milestone 3 report](milestone-3-report.md) records the completed Pit lifecycle proof. Succession needs a generic controller mutation capability before Milestone 4; [the proposal](core-controller-transfer-gap.md) remains unimplemented.

@@ -1,6 +1,14 @@
 # Core controller transfer proposal
 
-Status: proposal only. No Core changes are requested or implemented by Milestone 2. Succession remains deferred pending explicit review and approval.
+Status: resolved by the separately authorized generic Core review after Milestone 3. Core now implements the unreleased `controller-transfer` Consequence; see [the operation contract](../../LWE-Core/docs/controller-transfer.md). The proposal below is retained as the original gap analysis. HearthVale succession has not been implemented.
+
+## Reviewed result
+
+The gap was confirmed: bootstrap and Entity data effects provided no supported Actor-component reassignment. One atomic World State operation now exchanges two existing Actors' explicitly expected controllers and retargets only Shell-selected important Situation recipients. It preserves identity, non-controller state, claims, and history. The originating Event supplies meaning; the Consequence records controller and recipient before/after values for WHY queries. No special Action, single-Human invariant, or HearthVale semantics were added to Core.
+
+Core changes are limited to `src/core/world-state/index.js`, `tests/controller-transfer.test.js`, `docs/controller-transfer.md`, `docs/implementation-contracts.md`, `README.md`, and `CHANGELOG.md`. Eight focused tests cover continuity, opportunity references, invalid and stale transfers, rollback, exact reload, no replay, delayed work, causal-budget atomicity, and current-controller routing. All 64 Core tests and all 38 unchanged HearthVale tests pass; the Pit diagnostic also passes. Core package version and save format are unchanged; no release was tagged.
+
+Milestone 4 is unblocked with respect to controller/opportunity transfer. Its Shell implementation must still select eligible Actors, enforce its one-player policy, choose legitimate opportunity reassignment, and refresh the fixed autonomous routing cohort after a transfer. Core reads current controllers but does not repair Shell routing lists. History compaction remains a separate deferred limitation, not part of this change. Do not interpret the generic capability as an implemented succession flow.
 
 ## Required behavior
 
