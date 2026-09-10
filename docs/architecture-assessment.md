@@ -2,7 +2,7 @@
 
 Repository paths below reflect the [structural reorganization](repository-reorganization.md): rules, test fixtures, and diagnostic CLIs now live under `HearthVale_Shell`; documentation and shared integration tests remain at the repository root. Future Content, Story, and UI layers are empty placeholders.
 
-Milestones 1 and 2 use LWE Core v0.1.0 without Core changes. The original bootstrap assessment below remains the source mapping; [the Milestone 2 report](milestone-2-report.md) records the completed six-pillar fixture proof. Succession needs a generic controller mutation capability before Milestone 4; [the proposal](core-controller-transfer-gap.md) remains unimplemented.
+Milestones 1–3 use LWE Core v0.1.0 without Core changes. The original bootstrap assessment below remains the source mapping; [the Milestone 2 report](milestone-2-report.md) records the completed six-pillar fixture proof and [the Milestone 3 report](milestone-3-report.md) records the completed Pit lifecycle proof. Succession needs a generic controller mutation capability before Milestone 4; [the proposal](core-controller-transfer-gap.md) remains unimplemented.
 
 ## Sources and repository findings
 
@@ -110,6 +110,12 @@ No empty domain directories or speculative frameworks. Introduce action, informa
 5. Milestone 5: deliberately classify legacy material as Shell rule, content, presentation, or obsolete only after the preceding proofs pass.
 
 Core baseline verification: 56 tests passed before implementation. Broader gameplay tests belong to later milestones; this bootstrap does not claim to prove them.
+
+## Milestone 3 result
+
+The minimal Pit proof implements a persistent Pit, one-AP entry, free internal steps/discovery/return, immediate permanent recognized discovery, explicit return reconciliation, and exact active-expedition checkpoints. Internal Core boundaries do not advance the HearthVale calendar or daily autonomous activity. Return permits broader resolution again; the existing explicit Day-end policy remains responsible for daily decisions and calendar advancement. Shared discovery records disclose only the recognized location, not incidental local events.
+
+A deterministic test-only reconstruction boundary retires an undiscovered ephemeral space and replaces it while retaining the Named Location and its causal history. Retirement preserves Core historical references; this is neither history pruning nor a full Chapter generator. All 38 HearthVale tests, 56 Core regressions, and three CLI smoke tests pass. Core and Legacy Git working trees remain clean, and the only external implementation import is Core's public API. No new Core gap or architecture contradiction was found. Review the existing controller/opportunity-transfer proposal in a separately authorized Core task before beginning Milestone 4; production Content, Story, and UI remain empty placeholders.
 
 ## Milestone 1 result
 

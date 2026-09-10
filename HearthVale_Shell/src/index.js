@@ -4,15 +4,18 @@ import { makeHelpSituation, surfaceHelp, priorityConsequences, expiredPriorityEv
 import { HELP, helpAction, helpPerceptions } from './actions.js';
 import { progressionActions, autonomousActors } from './progression.js';
 import { availableActions, desires, choices } from './autonomy.js';
+import { activeExpedition, pitActions, pitReturnEvents, pitPerceptions, pitAvailable, pitMoveAllowed } from './pit.js';
 
 export function createHearthValeShell({ autonomousIds = [] } = {}) {
   // Fixed cohort for this milestone; restore derives it from saved Actors.
   // This immutable routing list supplies no world knowledge to decision hooks.
   const roster = Object.freeze([...new Set(autonomousIds)]);
   return Object.freeze({
-    actions: { ...progressionActions, [HELP]: helpAction },
+    actions: { ...progressionActions, [HELP]: helpAction, ...pitActions, Move: { eligible: pitMoveAllowed } },
     worldProcesses: ({ world }) => {
-      if (world.globals.hearthvale.initialized) return expiredPriorityEvents(world);
+      if (world.globals.hearthvale.initialized) {
+        return activeExpedition(world) ? [] : [...pitReturnEvents(world), ...expiredPriorityEvents(world)];
+      }
       const player = Object.values(world.entities).find(actor => actor.actor?.controller === 'Human').id;
       return [{
         type: 'hearthvale.world-started', data: { significance: 'historical' },
@@ -29,13 +32,13 @@ export function createHearthValeShell({ autonomousIds = [] } = {}) {
         ],
       }];
     },
-    perceive: context => context.event.event.type === 'hearthvale.world-started'
+    perceive: context => [...(context.event.event.type === 'hearthvale.world-started'
       ? Object.values(context.world.entities).filter(entity => entity.actor).map(actor => ({
         actor: actor.id, claim: { subject: actor.id, key: 'primaryLocation', value: actor.primaryLocation },
-      })) : helpPerceptions(context),
-    surfaceOpportunity: surfaceHelp,
+      })) : helpPerceptions(context)), ...pitPerceptions(context)],
+    surfaceOpportunity: context => !activeExpedition(context.world) && surfaceHelp(context),
     consequences: priorityConsequences,
-    available: availableActions,
+    available: context => [...availableActions(context), ...pitAvailable(context)],
     offscreenActors: () => roster,
     desires,
     choices,

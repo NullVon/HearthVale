@@ -1,5 +1,6 @@
 import { createHearthValeRuntime } from './index.js';
 import { BEGIN_DAY_END, FINISH_DAY_END, autonomousActors } from './progression.js';
+import { activeExpedition } from './pit.js';
 
 // Thin command adapter: Core remains the only simulation and persistence engine.
 export function createHearthValeGame(options = {}) {
@@ -23,6 +24,7 @@ export function createHearthValeGame(options = {}) {
     }
   }
   function beginDayEnd() {
+    if (activeExpedition(world())) throw new Error('Return from the Pit before ending the Day');
     const current = world().globals.hearthvale;
     if ((current.progression?.phase ?? 'active') !== 'active') throw new Error('Day is already closing');
     return scene([{ actor: playerId(), type: BEGIN_DAY_END, params: { day: current.calendar.day } }], true);
@@ -51,5 +53,7 @@ export function createHearthValeGame(options = {}) {
       return finishDayEnd();
     },
     ...reads,
+    // Public shared source for recognized discoveries only, not an objective-world dump.
+    sharedDiscoveries: () => runtime.snapshot().world.globals.hearthvaleDiscoveries ?? Object.freeze({}),
   });
 }

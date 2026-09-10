@@ -1,6 +1,6 @@
 # HearthVale
 
-The clean HearthVale LWE Shell. Milestones 1 and 2 prove bootstrap and a six-pillar causal loop with unified Actors, a protected help Situation, legitimate awareness, immediate consequences, a minimal support Relation, Day/Week progression, weighted autonomy, and exact saves. All content is replaceable test/demo data; no production game content is implemented.
+The clean HearthVale LWE Shell. Milestones 1–3 prove bootstrap, a six-pillar causal loop, and a minimal persistent Pit expedition with immediate permanent discovery and exact saves. All content is replaceable test/demo data; no production game content is implemented.
 
 Repository layout:
 
@@ -8,7 +8,7 @@ Repository layout:
 HearthVale/
 ├── HearthVale_Shell/
 │   ├── src/          # current Shell rules and Core adapter
-│   ├── fixtures/     # replaceable bootstrap and six-pillar demo data
+│   ├── fixtures/     # replaceable bootstrap, six-pillar, and Pit demo data
 │   └── cli/          # Shell diagnostics, not production UI
 ├── HearthVale_Content/  # future production Content (.gitkeep only)
 ├── HearthVale_Story/    # future authored narrative (.gitkeep only)
@@ -27,10 +27,11 @@ Requires Node.js >=22 and the sibling `../LWE-Core` repository at v0.1.0 (inspec
 ```sh
 node HearthVale_Shell/cli/bootstrap.js
 node HearthVale_Shell/cli/six-pillar-demo.js
+node HearthVale_Shell/cli/pit-demo.js
 node --test
 ```
 
-`npm start`, `npm run demo`, and `npm test` are equivalent. Run Core regression tests with `node --test` from `../LWE-Core`.
+`npm start`, `npm run demo`, `npm run demo:pit`, and `npm test` are equivalent. Run Core regression tests with `node --test` from `../LWE-Core`.
 
 ```js
 import { createHearthValeGame } from './HearthVale_Shell/src/index.js';
@@ -54,7 +55,11 @@ The initial Scene records a world-started Event, applies its initialization Cons
 
 `beginDayEnd()` completes daily decisions at a saveable Core boundary; `finishDayEnd()` advances the calendar. `endDay()` performs both or finishes a saved closing Day. Protection starts when the direct request is surfaced, permits at most one autonomous contribution per Situation per Week, and prevents autonomous final resolution until it expires. Idle is valid and weekly reconciliation adds no Actor turn.
 
-See [the Milestone 2 report](docs/milestone-2-report.md) for the implemented flow, files, tests, and limits, and [the architecture assessment](docs/architecture-assessment.md) for the authority mapping and implementation order. Pit remains Milestone 3. Succession remains deferred behind [the controller-transfer proposal](docs/core-controller-transfer-gap.md); no Core workaround is implemented.
+The Pit fixture supports `hearthvale.enter-pit`, `hearthvale.advance-pit`, `hearthvale.recognize-pit-discovery`, and `hearthvale.exit-pit` through `game.perform({ type, targets: [pitIds.pit] })`. Import these constants from `HearthVale_Shell/src/pit.js` and fixture definitions from `HearthVale_Shell/fixtures/pit-fixture.js`. Entry spends exactly one AP; internal steps, discovery, and return spend none. Each command completes a short Core Scene, allowing exact saves while the Shell expedition remains active. Day completion is blocked inside the Pit. Return reconciles the expedition; explicit Day completion then resumes normal daily autonomy and calendar progression.
+
+`game.sharedDiscoveries()` exposes recognized permanent discoveries only. Local expedition claims remain Actor knowledge. The deterministic reconstruction helper is test scheduling infrastructure: it replaces undiscovered ephemeral space while retaining the permanent location and causal history. It is not a player command, Chapter generator, or shortcut system.
+
+See [the Milestone 3 report](docs/milestone-3-report.md) for the Pit flow, files, 38 HearthVale tests, and limits; [the Milestone 2 report](docs/milestone-2-report.md) records the earlier causal loop. The [architecture assessment](docs/architecture-assessment.md) records authority and implementation order. Succession remains deferred behind [the controller-transfer proposal](docs/core-controller-transfer-gap.md); no Core workaround is implemented.
 
 The [Master Design Handoff](docs/HearthVale_Master_Design_Handoff.md) governs intended game, mechanics, tone, content direction, and prior design decisions. Authority order is current Core contracts → Shell Six Pillars Architecture → Shell Architecture Contracts → Master Design Handoff → Legacy. A lower-priority LOCKED label never overrides newer architecture. The assessment records specific conflicts and their governing interpretations; bootstrap attributes and names remain proof fixtures.
 

@@ -1,3 +1,5 @@
+import { activeExpedition } from './pit.js';
+
 export const BEGIN_DAY_END = 'hearthvale.begin-day-end';
 export const FINISH_DAY_END = 'hearthvale.finish-day-end';
 export const PROGRESS_GOAL = 'hearthvale.progress-main-goal';
@@ -10,7 +12,7 @@ export const autonomousActors = world => Object.values(world.entities)
   .filter(actor => actor.actor?.controller === 'Autonomous' && actor.lifecycle === 'active');
 
 export function canDecideToday(world, actor) {
-  return actor.actor.controller === 'Autonomous' && phase(world) === 'closing'
+  return !activeExpedition(world) && actor.actor.controller === 'Autonomous' && phase(world) === 'closing'
     && (actor.data.daily?.decidedDay ?? 0) < clock(world).calendar.day;
 }
 
@@ -24,7 +26,7 @@ export function dailyEffect(world, actor, meaningful) {
 }
 
 function dayCommandAllowed({ attempt, world }, expectedPhase) {
-  return world.entities[attempt.actor].actor.controller === 'Human'
+  return !activeExpedition(world) && world.entities[attempt.actor].actor.controller === 'Human'
     && attempt.params.day === clock(world).calendar.day && phase(world) === expectedPhase;
 }
 
