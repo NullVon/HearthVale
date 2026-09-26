@@ -10,7 +10,24 @@
     "demo": "node HearthVale_Shell/cli/six-pillar-demo.js",
     "demo:pit": "node HearthVale_Shell/cli/pit-demo.js",
     "demo:succession": "node HearthVale_Shell/cli/succession-demo.js",
+    "build:mobile": "node scripts/build-mobile.mjs",
+    "android:sync": "npm run build:mobile && cap sync android",
+    "android:open": "cap open android",
+    "android:apk": "npm run android:sync && cd android && gradlew.bat assembleDebug",
     "test": "node --test"
   },
-  "engines": { "node": ">=22" }
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
+    "esbuild": "^0.28.2"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
 }

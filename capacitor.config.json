@@ -1,0 +1,8 @@
+{
+  "appId": "com.nullvon.hearthvale",
+  "appName": "HearthVale",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}
