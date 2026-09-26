@@ -1,0 +1,31 @@
+import { writeFile } from 'node:fs/promises';
+import { surfaceFixture,configure } from './helpers/m3-fixture.js';
+import { entered,setup,roomFixture,combatFixture,item } from './helpers/m2-fixture.js';
+import { routeFloor } from '../HearthVale_Shell/src/expedition-discovery.js';
+import { economyState } from '../HearthVale_Shell/src/economy.js';
+import { roomPool } from '../HearthVale_Content/expedition.js';
+import { integratedFixture,apply } from './helpers/m4-fixture.js';
+import { dayAutonomyEffects } from '../HearthVale_Shell/src/day-autonomy.js';
+const fixtures={};
+const put=(name,g)=>fixtures[name]=g.save();
+put('Surface',surfaceFixture((w,a)=>{a.primaryLocation='loc_surface';a.data.relationships={hv_actor_1:2};a.data.scars=[{label:'Old cut'}];}));
+put('Shop unavailable',surfaceFixture((w,a)=>{a.data.attributes.resources.gold=0;w.globals.hearthvaleServices=economyState(w);w.globals.hearthvaleServices.stock.item_hp_potion_basic=2;}));
+put('Shop used gear',surfaceFixture((w,a)=>{w.globals.hearthvaleServices=economyState(w);w.globals.hearthvaleServices.used=[{...item(a,'item_sword'),durability:3,soldDay:1}];a.data.holdings={materials:{item_moonleaf:3},valuables:{item_silver_locket:1}};}));
+put('Training',surfaceFixture((w,a)=>{a.primaryLocation='loc_guild';w.globals.hearthvaleServices={...economyState(w),auronTrainingUnlocked:true};}));
+for(const family of ['resource','hazard','treasure','event','empty','discovery']){
+  const room=roomPool.find(r=>r.family===family);
+  put(family,setup(entered(),ctx=>{roomFixture(ctx,family,room.encounter);ctx.expedition.floor.rooms[0].title=room.title;}));
+}
+put('Combat',combatFixture());
+put('Incoming defense',setup(combatFixture(),ctx=>{ctx.expedition.combat.phase='incoming';}));
+put('Combat spells',setup(combatFixture(),ctx=>{ctx.actor.data.inventory.spells=['spell_fireball','spell_heal','spell_barrier','spell_unlock'];ctx.actor.data.attributes.resources.essence=0;}));
+put('Return encounter',setup(combatFixture(),ctx=>{ctx.expedition.combat.kind='return';}));
+let square=setup(entered(),(ctx,rng)=>{ctx.pit.sunkenSquare={floor:9,pending:true,remaining:2};ctx.expedition.floor=routeFloor(ctx,9,1,[],rng);ctx.expedition.deepestFloor=9;ctx.expedition.roomIndex=0;ctx.actor.data.inventory.spells[0]='spell_teleport';ctx.actor.data.attributes.resources.essence=30;});
+put('Sunken Square',square);
+square.perform('pit.resolve-room',{approach:'inspect'});square.perform('pit.cast',{slot:0});
+put('Known shortcut',square);
+let rook=integratedFixture();rook.perform('Move',{location:'loc_inn'});
+rook=apply(rook,w=>{const s=economyState(w);return [...dayAutonomyEffects(w,s,{next:()=>0}),{type:'global',key:'hearthvaleServices',value:s}];});
+rook.perform('Move',{location:'loc_guild'});put('Rook resolved',rook);
+await writeFile(new URL('./browser/m6c1-fixtures.js',import.meta.url),`// Generated test-only Core snapshots, loaded through production Load.\nexport const fixtures=${JSON.stringify(fixtures)};\n`);
+console.log(`Wrote ${Object.keys(fixtures).length} M6C1 checkpoints.`);

@@ -1,0 +1,13 @@
+import {writeFile} from 'node:fs/promises';
+import {finalHeartFixture,richLifeFixture} from './helpers/m5-fixture.js';
+import {bruteFixture,chapterFixture,death40Fixture,world,use,configure} from './helpers/m6-fixture.js';
+const fixtures={},put=(name,g)=>fixtures[name]=g.save();
+let g=finalHeartFixture();put('Before ordinary death',g);use(g,'pit.resolve-room');put('Ordinary death',g);
+g.beginSuccession();put('Successor candidates',g);g.chooseSuccessor(world(g).globals.hearthvaleDeathTransition.candidates[0].id);put('Successor resumed',g);
+g=richLifeFixture();use(g,'pit.resolve-room');put('Rich Life Record',g);
+g=configure(richLifeFixture(),w=>{w.entities[w.globals.hearthvaleSurface.playerId].data.identity.name='A long remembered name '.repeat(14);});use(g,'pit.resolve-room');put('Long record wrapping',g);
+g=bruteFixture();put('Before Brute ending',g);use(g,'pit.attack',c=>c.params.slot===0);put('Brute ending',g);
+g=chapterFixture();put('Before Day 40 sleep',g);g.perform('surface.sleep',{day:40,confirmed:true});put('Day 40 ending',g);
+g=death40Fixture();put('Before Day 40 death',g);use(g,'pit.resolve-room');put('Day 40 death ending',g);
+await writeFile(new URL('./browser/m6c2-fixtures.js',import.meta.url),`// Test-only Core checkpoints. Rich history reuses the disclosed M5 legacy post-clear fixture; long text is layout stress only.\nexport const fixtures=${JSON.stringify(fixtures)};\n`);
+console.log(`Wrote ${Object.keys(fixtures).length} M6C2 browser checkpoints.`);

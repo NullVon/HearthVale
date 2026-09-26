@@ -1,5 +1,18 @@
 export const baselineResources = Object.freeze({ ap: 4, maxAp: 4, sanity: 5, maxSanity: 5 });
 
+// Pure V1 formula boundary for validated authored effects. Check modifiers
+// never change the supplied effective CON (or the Actor's stored base stats).
+export function deriveConstitutionValues(effectiveCon, effects = []) {
+  if (!Number.isSafeInteger(effectiveCon) || effectiveCon < 1) throw new Error('Invalid effective CON');
+  const directHp = effects.filter(effect => effect.tag === 'effect_max_hp').reduce((sum, effect) => sum + effect.value, 0);
+  return { effectiveCon, maxHp: 10 + 2 * effectiveCon + directHp, naturalArmor: Math.floor(effectiveCon / 2) };
+}
+
+export function constitutionCheckBonus(effects = [], { physicalResilience = false } = {}) {
+  return physicalResilience ? effects.filter(effect => effect.tag === 'effect_con_physical_resilience_check')
+    .reduce((sum, effect) => sum + effect.value, 0) : 0;
+}
+
 export function createActor({ id, name, controller, baseStats, traits, mainGoal, resources = baselineResources, decisionWeights = { goal: 0, help: 0, idle: 1 } }, location) {
   if (typeof name !== 'string' || !name.trim()) throw new Error('Actor identity requires a name');
   if (!['Human', 'Autonomous'].includes(controller)) throw new Error('Invalid HearthVale controller');

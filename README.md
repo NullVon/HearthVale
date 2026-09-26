@@ -1,71 +1,86 @@
 # HearthVale
 
-The clean HearthVale LWE Shell. Milestones 1–4 prove bootstrap, a six-pillar causal loop, persistent Pit expeditions, existing-Actor succession, bounded historical advancement, and exact saves. All content is replaceable test/demo data; no production game content is implemented.
+HearthVale is a browser-based RPG vertical slice built as a Shell for the Living World Engine (LWE).
 
-Repository layout:
+## V1 Vertical Slice
+
+The M0–M6 vertical-slice implementation is complete.
+
+- Acceptance: **A01–A32, 32/32 passed**
+- HearthVale tests: **304 passed**
+- LWE-Core tests: **73 passed**
+- Combined verified baseline: **377 passed, 0 failed**
+- Production campaigns verified both the Ruin Brute completion route and the Day-40 death/succession route.
+
+The current build includes the Surface, procedural Stratum-1 Pit expeditions, combat, equipment, crafting, training, living-world autonomy, Situations, holder-aware Information, weekly reconciliation, death, Life Records, succession, persistence, and both V1 completion paths.
+
+## Run locally
+
+Requirements:
+
+- Node.js 22 or newer
+- The compatible sibling `../LWE-Core` repository
+
+From this directory:
+
+```powershell
+npm run surface
+```
+Open:
 
 ```text
-HearthVale/
-├── HearthVale_Shell/
-│   ├── src/          # current Shell rules and Core adapter
-│   ├── fixtures/     # replaceable bootstrap, six-pillar, Pit, and succession data
-│   └── cli/          # Shell diagnostics, not production UI
-├── HearthVale_Content/  # future production Content (.gitkeep only)
-├── HearthVale_Story/    # future authored narrative (.gitkeep only)
-├── HearthVale_UI/       # future presentation (.gitkeep only)
-├── docs/               # architecture, design, and reports
-├── tests/              # shared integration tests
-├── package.json        # repository-level scripts and package entry point
-├── README.md
-└── .git/
+http://127.0.0.1:4173
 ```
 
-The diagnostic CLIs and fixtures accompany the Shell proof. Production Content, Story, and UI remain separately designed layers with no implementation yet. See [the reorganization report](docs/repository-reorganization.md) for the move inventory and verification.
+Run the HearthVale test suite with:
 
-Requires Node.js >=22 and the sibling `../LWE-Core` repository at v0.1.0 (inspected commit `2933f67`). Run from this directory; no package installation is needed:
+```powershell
+npm test
+```
 
-```sh
-node HearthVale_Shell/cli/bootstrap.js
-node HearthVale_Shell/cli/six-pillar-demo.js
-node HearthVale_Shell/cli/pit-demo.js
-node HearthVale_Shell/cli/succession-demo.js
+Run the Core regression suite from the sibling repository with:
+
+```powershell
+cd ..\LWE-Core
 node --test
 ```
 
-`npm start`, `npm run demo`, `npm run demo:pit`, `npm run demo:succession`, and `npm test` are equivalent. Run Core regression tests with `node --test` from `../LWE-Core`. Succession requires the accepted generic controller-transfer addition to Core; the original tagged v0.1.0 alone does not provide that operation.
+## Repository layout
 
-```js
-import { createHearthValeGame } from './HearthVale_Shell/src/index.js';
-import { sixPillarFixture, demoIds } from './HearthVale_Shell/fixtures/six-pillar-fixture.js';
-import { HELP } from './HearthVale_Shell/src/actions.js';
-
-const game = createHearthValeGame({ definition: sixPillarFixture(), seed: 1 });
-game.perform({ type: HELP, situation: demoIds.situation });
-game.perform({ type: HELP, situation: demoIds.situation });
-game.endDay();
-const saved = game.save();
-const restored = createHearthValeGame({ saved });
-console.log(restored.view(demoIds.player)); // Actor knowledge, not objective truth
+```text
+HearthVale/
+├── HearthVale_Shell/    # Shell rules, orchestration, runtime adapter, development host
+├── HearthVale_Content/  # Authored catalogs and content definitions
+├── HearthVale_Story/    # Player-facing story and contextual prose
+├── HearthVale_UI/       # Browser UI
+├── docs/                # Architecture and V1 design documents
+├── tests/               # Unit, integration, campaign, and browser fixtures
+├── package.json
+└── README.md
 ```
+## Architecture
 
-`HearthVale_Shell/src/core.js` is the only external Core import and uses its documented public entry point. `HearthVale_Shell/src` owns rules, `HearthVale_Shell/fixtures` isolates all temporary fixtures, and `HearthVale_Shell/cli` contains diagnostic CLIs. `createHearthValeRuntime` still exposes the raw Core development interface; `createHearthValeGame` provides player commands. Objective snapshots are for adjudication/inspection, not an omniscient player UI.
+LWE follows one central boundary:
 
-Actor identity, base stats, traits, resources, and one Main Goal live in Core Entity data. Player maps to Core `Human`; other Actors use `Autonomous`. AP 4 and Sanity 5 are initial maxima, not immutable caps. Autonomous Actors share the schema but do not spend player AP. Permanent/living/ephemeral policy is Shell data, separate from Core active/retired lifecycle.
+> **Core owns structure and generic resolution. Shell owns meaning.**
 
-The initial Scene records a world-started Event, applies its initialization Consequence, and grants each Actor direct knowledge of their own starting location. It advances no fictional time, charges no AP, and schedules no autonomous accomplishments. Saves use Core's exact checkpoint serialization and restore with fresh Shell hooks; active or suspended Core Scenes remain unsaveable. Schema version 1 is the only current HearthVale world schema.
+HearthVale is the Shell. It defines its Actors, traits, resources, combat rules, Pit, economy, magic, discoveries, succession rules, presentation, and authored content. LWE-Core provides the generic persistent-world machinery beneath those systems.
 
-`beginDayEnd()` completes daily decisions at a saveable Core boundary; `finishDayEnd()` advances the calendar. `endDay()` performs both or finishes a saved closing Day. Protection starts when the direct request is surfaced, permits at most one autonomous contribution per Situation per Week, and prevents autonomous final resolution until it expires. Idle is valid and weekly reconciliation adds no Actor turn.
+The browser entry point is `createSurfaceGame({ seed, saved })` from `HearthVale_Shell/src/surface.js`.
 
-The Pit fixture supports `hearthvale.enter-pit`, `hearthvale.advance-pit`, `hearthvale.recognize-pit-discovery`, and `hearthvale.exit-pit` through `game.perform({ type, targets: [pitIds.pit] })`. Import these constants from `HearthVale_Shell/src/pit.js` and fixture definitions from `HearthVale_Shell/fixtures/pit-fixture.js`. Entry spends exactly one AP; internal steps, discovery, and return spend none. Each command completes a short Core Scene, allowing exact saves while the Shell expedition remains active. Day completion is blocked inside the Pit. Return reconciles the expedition; explicit Day completion then resumes normal daily autonomy and calendar progression.
+The browser automatically checkpoints resolved actions. Menu **Save/Load** uses a separate manual save slot, while **Continue** restores the latest automatic checkpoint. Saves are local to the browser/origin; there is no server-side save service.
 
-`game.sharedDiscoveries()` exposes recognized permanent discoveries only. Local expedition claims remain Actor knowledge. The deterministic reconstruction helper is test scheduling infrastructure: it replaces undiscovered ephemeral space while retaining the permanent location and causal history. It is not a player command, Chapter generator, or shortcut system.
+## V1 design documents
 
-See [the Milestone 3 report](docs/milestone-3-report.md) for the earlier Pit proof and [the Milestone 2 report](docs/milestone-2-report.md) for the causal loop. The [architecture assessment](docs/architecture-assessment.md) records authority and implementation order. The separately authorized [controller-transfer review](docs/core-controller-transfer-gap.md) resolved the generic Core gap; Milestone 4 now integrates that operation with Shell eligibility, explicit opportunity selection, and refreshed autonomous routing.
+The V1 design set is kept under `docs/`:
 
-The [Master Design Handoff](docs/HearthVale_Master_Design_Handoff.md) governs intended game, mechanics, tone, content direction, and prior design decisions. Authority order is current Core contracts → Shell Six Pillars Architecture → Shell Architecture Contracts → Master Design Handoff → Legacy. A lower-priority LOCKED label never overrides newer architecture. The assessment records specific conflicts and their governing interpretations; bootstrap attributes and names remain proof fixtures.
+- `HearthVale_V1_VS_Master_Design.docx`
+- `HearthVale_V1_VS_Mechanics.docx`
+- `HearthVale_V1_VS_Content.docx`
+- `HearthVale_V1_VS_Story.docx`
+- `HearthVale_V1_VS_UI-UX_Guide.docx`
+- `HearthVale_V1_VS_Implementation_Brief.docx`
 
-The parent directory is a workspace container. `LWE-Core` and `HearthVale_Legacy_PreLWE` are separate repositories and were not modified. Legacy remains reference-only with no runtime dependency or migrated content.
+## Current boundary
 
-Milestone 4 integrates the accepted Core operation without further Core edits. With `successionFixture({ years: 0 })` (or `years: 3` for the historical proof), call `game.successionOptions()`, then `game.beginSuccession(actorId)`. Store its returned `preSuccessionSave` and/or `preparedSave` in the caller's persistence layer. Call `game.completeSuccession()` to continue with the existing successor. The adapter refreshes autonomous routing; the old player becomes Autonomous. Personal and public Situations remain intact; only explicitly marked player-role recipients transfer. Unclassified important recipients block preparation until a Shell routing policy is defined.
-
-All 47 HearthVale tests and 64 Core tests pass. See [the Milestone 4 report](docs/milestone-4-report.md) for the complete file inventory, verified continuity, save boundaries, and limits. The minimal Milestones 1–4 engineering foundation is complete; production systems and content remain separate work.
+V1 M6 is complete. Stratum 2 is intentionally not playable in this vertical slice. Post-M6 work includes direct playtesting, packaging, and a separate audit of reusable HearthVale-era capabilities that may belong in LWE-Core.
