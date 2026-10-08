@@ -252,8 +252,8 @@ A HearthVale year:
 - 5 days per week.
 
 Therefore:
-> **5 days = 1 week**  
-> **10 days = 1 season**  
+> **5 days = 1 week**
+> **10 days = 1 season**
 > **40 days = 1 year**
 
 ## 7.2 One playable day = one calendar day — LOCKED
@@ -623,7 +623,7 @@ Possible costs:
 - another life.
 
 Sometimes a lethal event may become:
-> “Not yet.”  
+> “Not yet.”
 > “We could avoid this.”
 
 Player may Accept or Refuse/Die.
@@ -728,10 +728,10 @@ Exact curve = **TBD**.
 
 ## 20.1 Physical — LOCKED
 
-> Incoming Physical Damage  
-> − selected Block  
-> − Equipped Armor  
-> − Natural Armor  
+> Incoming Physical Damage
+> − selected Block
+> − Equipped Armor
+> − Natural Armor
 > = HP Damage (minimum 0)
 
 ## 20.2 Magical — LOCKED
@@ -1040,9 +1040,19 @@ Repeated utility casting still pushes cost/mental danger. The user specifically 
 Core Path of Adventure tension:
 > cast now or save it for a merchant?
 
+Current VS expedition supply rule:
+- every resolved non-empty room grants **+1 Essence guaranteed**;
+- Resource rooms grant **+1 additional Essence**;
+- resolved Combat rooms separately have a **50% chance to grant 1–2 Arrows**;
+- the Arrow roll is room-based and never replaces or multiplies the guaranteed Essence.
+
+Do not add separate per-enemy Essence drops in the VS.
+
 ## 31.5 Exponential casting cost — LOCKED
 
-> **1 → 2 → 4 → 8 → 16 → 32...**
+Current VS authority: Phase 5 magic brief plus the Playtest 3 economy correction. Before a learned cast, cost is `2 ^ max(0, Learned Cast Count - INT + 1)`. Count persists across encounters and resets only when the expedition ends. WIS determines safe casts; Overcast uses DC 8/11/14/17/20 (cap). Scrolls spend no Essence, add no learned count, and never Overcast.
+
+At INT 1: **1 → 2 → 4 → 8 → 16 → 32...** Higher INT delays the doubling as specified in the Phase 5 brief.
 
 The user explicitly preferred keeping the doubling curve.
 
@@ -1055,9 +1065,19 @@ Minimum spell cost:
 
 Resets/reduces the exponential cast count rather than filling a separate MP bar.
 
-## 31.7 Spell misses — LOCKED
+## 31.7 Offensive spell reliability — CURRENT VS
 
-Still spend Essence and advance escalation.
+Ordinary offensive magic, including Fireball and Force, hits automatically: no conventional accuracy, enemy Dodge, or hit-quality roll. Legacy spell `accuracy` metadata is obsolete and is not an explicit authored exception. The earlier spell-miss rule is superseded by Phase 5 §5C and the legacy runtime audit. Any future exception must be explicitly authored; none exists in the current VS spell library.
+
+The §31.4 room supply applies to named discoveries and manifestation Combat rooms too. Hollow Double's 5 XP/+1 Sanity and absence of creature loot remain; room Essence/Arrows are separate from enemy drops.
+
+## 31.8 Barrier and Teleport — CURRENT VS
+
+Phase 5's dedicated magic brief is authoritative for these two mechanics; Phase 7's preserved current-round Barrier and exploration-only Teleport restrictions are obsolete.
+
+Barrier reduces incoming physical or magical HP damage by 3 against the next enemy offensive action. It is not a Block choice and can coexist with Dodge, Block or Counterattack. It gives no Stability bonus. It expires after that offensive action resolves, even if Dodged or fully absorbed; advancing a round or resolving a nonoffensive/cancelled action does not consume it.
+
+Teleport is usable during exploration and the normal combat action phase. Learned Teleport uses the shared Essence/count/Overcast rules; Scroll Teleport costs 0 Essence, adds no learned count and never Overcasts. Resolve the effect, then learned Overcast, before extracting a surviving caster immediately to the Pit Entrance. Extraction bypasses the Return route/Return Encounter and prevents the pending enemy action. Existing expedition cleanup and status semantics apply; Teleport does not cure Poison. Slow remains deferred for v0.1.
 
 ---
 
@@ -1269,10 +1289,10 @@ Examples:
 An interaction/beat inside a Scene.
 
 Example:
-> **Goblin Burrow Scene**  
-> Room 1 — Goblin fight  
-> Room 2 — Goblin fight  
-> Room 3 — stronger Goblin  
+> **Goblin Burrow Scene**
+> Room 1 — Goblin fight
+> Room 2 — Goblin fight
+> Room 3 — stronger Goblin
 > Room 4 — dedicated loot room
 
 ---

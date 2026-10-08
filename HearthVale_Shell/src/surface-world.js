@@ -1,5 +1,5 @@
 import { surfaceCatalog } from '../../HearthVale_Content/surface.js';
-import { generateCandidates, instantiateSurfaceActor } from './surface-candidates.js';
+import { generateNewGameCandidates, instantiateSurfaceActor } from './surface-candidates.js';
 import { openingCards } from '../../HearthVale_Story/surface.js';
 
 export const surfaceState = world => world.globals.hearthvaleSurface;
@@ -31,7 +31,7 @@ export function openingProcess(world, rng, intent) {
   const state = surfaceState(world);
   const update = value => [{ type: 'global', key: 'hearthvaleSurface', value }];
   if (!state.initialized) return [{ type: 'hearthvale.surface-created', effects: update({ ...state,
-    initialized: true, candidates: generateCandidates(rng, state.nextActorInstance,
+    initialized: true, candidates: generateNewGameCandidates(rng, state.nextActorInstance,
       Object.values(world.entities).filter(e => e.actor).map(e => e.data.identity.name)),
     nextActorInstance: state.nextActorInstance + 3,
   }) }];

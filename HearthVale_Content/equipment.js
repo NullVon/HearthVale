@@ -15,7 +15,7 @@ export function addEquipment(catalog) {
     ['iron_hammer','Iron Hammer','hammer',5,0,13,3,45],
     ['iron_shield','Iron Shield','shield',0,4,18,0,45],
     ['iron_chest','Iron Chest','chest_armor',0,3,null,0,60],
-    ['crystal_bow','Crystal Bow','bow',4,0,14,0,40],
+    ['crystal_bow','Crystal Bow','bow',4,0,null,0,40],
   ];
   for (const [id,label,base,damage,defense,dur,impact,price] of gear) {
     const value={...structuredClone(item(base)),id:`item_${id}`,label,defense,price};
@@ -28,5 +28,5 @@ export function addEquipment(catalog) {
   item('antidote').price=8; item('cleanse_tonic').price=10;
   const recipes=[['slimeguard_shield','slime_core',2,25],['beetle_chest','beetle_shell',3,35],['beetle_shield','beetle_shell',2,30],['fang_sword','beast_fang',2,30],['fang_hammer','beast_fang',3,35],['antidote','venom_gland',1,8,2],['hp_potion_greater','moonleaf',2,12,2],['cleanse_tonic','bitterroot',2,10,2],['bigshroom_tonic','bigshroom',2,20,2],['iron_sword','iron_ore',2,40],['iron_hammer','iron_ore',3,45],['iron_shield','iron_ore',2,45],['iron_chest','iron_ore',3,60],['crystal_bow','crystal_shard',2,40]];
   catalog.recipes=recipes.map(([id,material,quantity,gold,count=1])=>({id:`recipe_${id}`,label:item(id).label,materials:[{item:`item_${material}`,quantity}],gold,output:`item_${id}`,quantity:count,service:count===2?'shop':'blacksmith'}));
-  catalog.vendors=[{id:'vendor_general_shop',label:'General Shop / Apothecary',location:'loc_shop',stock:[['arrows',40,10],['hp_potion_basic',8,2],['sword',4,0],['bow',3,0],['hammer',3,0],['shield',3,0],['chest_armor',2,0]].map(([id,target,floor])=>({item:`item_${id}`,target,floor}))}];
+  catalog.vendors=[{id:'vendor_general_shop',label:'General Shop / Apothecary',location:'loc_shop',stock:[['antidote',4,1],['arrows',40,10],['hp_potion_basic',8,2],['sword',4,0],['bow',3,0],['hammer',3,0],['shield',3,0],['chest_armor',2,0]].map(([id,target,floor])=>({item:`item_${id}`,target,floor}))}];
 }

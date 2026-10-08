@@ -1,10 +1,10 @@
-import { economyState,economyChoices,resolveEconomy } from './economy.js';
+import { economyState,economyChoices,resolveEconomy,validBulkSale } from './economy.js';
 import { trainingChoices,train } from './training.js';
 import { talk } from './social.js';
 import { byId } from '../../HearthVale_Content/expedition.js';
 import { canUseBag,useBag,swap,learn,definitionOf } from './expedition-equipment.js';
 import { requestChoices, resolveMaterialRequest, trackingChoices } from './living-situations.js';
-import { talkInformationEffects } from './information.js';
+import { talkInformationEffects,knowledgeState } from './information.js';
 
 export function serviceChoices(world){
   const s=world.globals.hearthvaleSurface,actor=world.entities[s?.playerId],pit=world.entities.hv_pit_1?.data;
@@ -21,7 +21,7 @@ export function serviceChoices(world){
     if(!item)return;const d=definitionOf(item);
     if(canUseBag(actor,bag))add('use',`Use ${d.label}`,{bag});
     if(d.category==='armor')add('armor',`Wear ${d.label} DEF ${d.defense}; replace ${definitionOf(inv.chest)?.label??'Empty'}`,{bag});
-    if(['weapon','shield','scroll'].includes(d.category))inv.equipped.forEach((equipped,slot)=>add('swap',`Equip ${d.label}; replace slot ${slot+1}: ${definitionOf(equipped)?.label??'Empty'}`,{bag,slot}));
+    if(['weapon','shield'].includes(d.category))inv.equipped.forEach((equipped,slot)=>add('swap',`Equip ${d.label}; replace slot ${slot+1}: ${definitionOf(equipped)?.label??'Empty'}`,{bag,slot}));
     if(d.category==='tome'&&!inv.spells.includes(d.spell)){const empty=inv.spells.indexOf(null);(empty>=0?[empty]:[0,1,2,3]).forEach(slot=>add('learn',`Learn ${byId('spells',d.spell).label}; replace ${inv.spells[slot]?byId('spells',inv.spells[slot]).label:'Empty'}`,{bag,slot}));}
     add('discard',`Discard ${d.label} ×${item.quantity} from Bag ${bag+1}`,{bag,id:item.id});
   });
@@ -29,7 +29,9 @@ export function serviceChoices(world){
 }
 const same=(a,b)=>Object.keys(a).length===Object.keys(b).length&&Object.keys(a).every(k=>a[k]===b[k]);
 export const serviceActions={'service.act':{
-  eligible:({world,attempt})=>attempt.actor===world.globals.hearthvaleSurface.playerId&&serviceChoices(world).some(c=>same(c.params,attempt.params)),
+  eligible:({world,attempt})=>attempt.actor===world.globals.hearthvaleSurface.playerId&&(attempt.params?.op==='sell-bulk'
+    ?Object.keys(attempt.params).length===2&&serviceChoices(world).some(c=>['sell','sell-holding'].includes(c.params.op))&&validBulkSale(world.entities[attempt.actor],attempt.params.items)
+    :serviceChoices(world).some(c=>same(c.params,attempt.params))),
   resolve:({world,attempt},{rng})=>{
     const original=world.entities[attempt.actor],actor=structuredClone(original),state=economyState(world),p=attempt.params;
     const ctx={world,actor,state,day:world.globals.hearthvaleSurface.calendar.day};
@@ -42,6 +44,16 @@ export const serviceActions={'service.act':{
     }
     else if(p.op==='fulfill-request')state.lastResult=actor.data.memories.at(-1).event;
     else if(handlers[p.op])handlers[p.op]();else resolveEconomy(ctx,p.op,p,rng);
+    if(p.op==='fulfill-request'){
+      const d=world.entities[p.situation].data.definition;
+      if(d.stock)state.lastResult+=d.stock.pool==='townSupplies'
+        ? `. Town supplies gained ${d.stock.quantity} ${byId('items',d.stock.item).label}.`
+        : `. The General Shop gained ${d.stock.quantity} ${byId('items',d.stock.item).label} for its shelves.`;
+    }
+    if(p.op==='talk'&&knowledgeState(world,actor.id,'hv_pit_1','discovery-loc_sunken_square')!=='Known'
+      &&requestEffects.some(effect=>effect.type==='learn'&&effect.actor===actor.id&&effect.claim.subject==='hv_pit_1'
+        &&effect.claim.key==='discovery-loc_sunken_square'&&effect.claim.certainty==='certain'))
+      state.lastResult+=' Future expeditions can enter via Sunken Square from the Pit Entrance.';
     // Silent inventory/bookmark changes must not claim an earlier Actor's receipt.
     if(!['swap','armor','discard','track-opportunity','untrack-opportunity'].includes(p.op))state.lastResultActor=actor.id;
     return {type:`hearthvale.service.${p.op}`,effects:[...requestEffects,...Object.entries(actor.data).filter(([key,value])=>JSON.stringify(value)!==JSON.stringify(original.data[key])).map(([key,value])=>({type:'data',entity:actor.id,key,value})),{type:'global',key:'hearthvaleServices',value:state},
@@ -52,10 +64,22 @@ export const serviceActions={'service.act':{
 export function serviceArrivalEvents(world){
   const s=world.globals.hearthvaleSurface,original=world.entities[s?.playerId];
   if(s?.stage!=='surface'||!original||original.lifecycle!=='active'||original.data.death||world.entities.hv_pit_1.data.expedition||world.entities.hv_pit_1.data.pendingFinalHeart||world.entities.hv_pit_1.data.pendingDeath)return [];
+  const state=economyState(world),events=[];
+  if(original.primaryLocation==='loc_guild'&&state.auronTrainingIntroduced!==true&&(state.auronTrainingPending===true||state.auronTrainingUnlocked===true)){
+    const auron=Object.values(world.entities).find(a=>a.data?.templateId==='actor_auron');
+    if(auron&&auron.lifecycle==='active'&&!auron.data.death&&auron.primaryLocation==='loc_guild'&&auron.data.attributes.resources.hearts>0){
+      state.auronTrainingPending=false;state.auronTrainingUnlocked=true;state.auronTrainingIntroduced=true;
+      state.auronTrainingIntroducedDay=s.calendar.day;state.auronTrainingIntroducedActor=original.id;
+      state.lastResult=null;state.lastResultActor=original.id;
+      events.push({type:'hearthvale.auron-training-introduced',data:{actor:original.id,auron:auron.id,day:s.calendar.day},effects:[{type:'global',key:'hearthvaleServices',value:state}]});
+    }
+  }
   const service=byId('locations',original.primaryLocation)?.serviceActor;
-  if(!service)return [];
+  if(!service)return events;
   const target=Object.values(world.entities).find(a=>a.data?.templateId===service);
-  if(!target||original.data.knownActors?.includes(target.id))return [];
-  const actor=structuredClone(original),state=economyState(world);talk({world,actor,state,day:s.calendar.day},target,true);
-  return [{type:'hearthvale.first-service-meeting',effects:[...Object.entries(actor.data).filter(([key,v])=>JSON.stringify(v)!==JSON.stringify(original.data[key])).map(([key,value])=>({type:'data',entity:actor.id,key,value})),{type:'global',key:'hearthvaleServices',value:state},{type:'learn',actor:actor.id,claim:{subject:target.id,key:'met',value:true}}]}];
+  if(!target||original.data.knownActors?.includes(target.id))return events;
+  // Complete both arrival introductions now, so a deferred first meeting cannot
+  // overwrite the player's next Training receipt. firstOnly still grants no recovery.
+  const actor=structuredClone(original),meetingState=structuredClone(state);talk({world,actor,state:meetingState,day:s.calendar.day},target,true);
+  return [...events,{type:'hearthvale.first-service-meeting',effects:[...Object.entries(actor.data).filter(([key,v])=>JSON.stringify(v)!==JSON.stringify(original.data[key])).map(([key,value])=>({type:'data',entity:actor.id,key,value})),{type:'global',key:'hearthvaleServices',value:meetingState},{type:'learn',actor:actor.id,claim:{subject:target.id,key:'met',value:true}}]}];
 }

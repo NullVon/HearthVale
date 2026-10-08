@@ -41,6 +41,24 @@ export function derivedActorValues(actor) {
   return {...values,maxHp:values.maxHp+(actor.data.expeditionHp??0)};
 }
 
+// Playtest 2 opening cohort only. Generate people with the ordinary rules first,
+// then use their already randomized ages to select the Bow + Fireball package.
+// No extra random draw shifts later world generation or autonomous decisions.
+// Succession continues to use generateCandidates without this loadout rule.
+export function generateNewGameCandidates(rng, firstInstance = 7, usedNames = []) {
+  const candidates = generateCandidates(rng, firstInstance, usedNames);
+  const magicIndex = candidates.reduce((sum,candidate)=>sum+candidate.age,0)%candidates.length;
+  for (const [index, candidate] of candidates.entries()) {
+    candidate.loadout.spells = index === magicIndex ? ['spell_fireball'] : [];
+    if (index === magicIndex) {
+      candidate.loadout.weapons = ['item_bow'];
+      candidate.loadout.arrows = 10;
+    }
+    validateCandidate(candidate, surfaceCatalog);
+  }
+  return candidates;
+}
+
 // Templates/profiles are converted once. Inventory instances are stored only
 // in these slots, not duplicated in a second starting-loadout resource model.
 export function instantiateSurfaceActor(profile, { id = profile.id, controller = 'Autonomous', location = 'loc_inn' } = {}) {

@@ -2,12 +2,14 @@ import { expeditionCatalog as catalog, byId } from '../../HearthVale_Content/exp
 import { definitionOf,resources } from './expedition-equipment.js';
 import { offerLoot } from './expedition-loot.js';
 export function economyState(world) {
-  return structuredClone(world.globals.hearthvaleServices??{stock:Object.fromEntries(catalog.vendors[0].stock.map(s=>[s.item,s.target])),used:[],knownMaterials:[],orders:[],nextOrder:1});
+  const state = structuredClone(world.globals.hearthvaleServices??{stock:Object.fromEntries(catalog.vendors[0].stock.map(s=>[s.item,s.target])),used:[],knownMaterials:[],orders:[],nextOrder:1});
+  state.stock.item_antidote ??= 4; // Legacy stock: materialize on the next ordinary transaction, never during load.
+  return state;
 }
 export function validateServices(world){
   const state=world.globals.hearthvaleServices;if(!state)return;
   const integer=n=>Number.isSafeInteger(n)&&n>=0;
-  if(!state.stock||!catalog.vendors[0].stock.every(s=>integer(state.stock[s.item]))||!Array.isArray(state.used)||!Array.isArray(state.orders)||!Array.isArray(state.knownMaterials)||!integer(state.nextOrder))throw new Error('Invalid service snapshot');
+  if(!state.stock||!catalog.vendors[0].stock.every(s=>integer(state.stock[s.item]) || s.item==='item_antidote' && state.stock[s.item]===undefined)||!Array.isArray(state.used)||!Array.isArray(state.orders)||!Array.isArray(state.knownMaterials)||!integer(state.nextOrder))throw new Error('Invalid service snapshot');
   if(state.knownMaterials.some(id=>byId('items',id)?.category!=='material')||new Set(state.knownMaterials).size!==state.knownMaterials.length)throw new Error('Invalid material knowledge');
   if(state.townSupplies && (typeof state.townSupplies!=='object'||Array.isArray(state.townSupplies)
     ||Object.entries(state.townSupplies).some(([id,count])=>byId('items',id)?.category!=='material'||!integer(count))))throw new Error('Invalid civic supply snapshot');
@@ -16,6 +18,32 @@ export function validateServices(world){
 }
 export function price(actor,base){return Math.ceil(base*(actor.data.attributes.traits.includes('trait_frugal')?0.9:1));}
 export function sellPrice(item){const d=definitionOf(item);return d.sellValue??(d.maxDurability?item.durability>0?Math.max(1,Math.floor((d.price??0)*0.5*item.durability/d.maxDurability)):0:Math.floor((d.price??0)*0.5));}
+// One eligibility/price source for individual compatibility sales and bulk sales.
+export function sellEntries(actor){
+  const entries=[],inv=actor.data.inventory;
+  for(const container of ['bag','equipped','chest']){
+    const items=container==='chest'?[inv.chest]:inv[container];
+    items.forEach((item,slot)=>{if(item&&sellPrice(item)>0)entries.push({item:item.templateId,quantity:item.quantity,unit:sellPrice(item),
+      params:{container,...(container==='chest'?{}:{slot}),id:item.id}});});
+  }
+  for(const group of ['materials','valuables'])for(const [item,quantity]of Object.entries(actor.data.holdings?.[group]??{}))
+    if(quantity>0&&byId('items',item)?.sellValue>0)entries.push({item,quantity,unit:byId('items',item).sellValue,params:{group,item}});
+  return entries;
+}
+export function sellOffers(actor){
+  const offers=new Map();
+  for(const entry of sellEntries(actor)){
+    const offer=offers.get(entry.item)??{item:entry.item,quantity:0,total:0,units:[]};
+    offer.quantity+=entry.quantity;offer.total+=entry.quantity*entry.unit;
+    if(!offer.units.includes(entry.unit))offer.units.push(entry.unit);
+    offers.set(entry.item,offer);
+  }
+  return [...offers.values()];
+}
+export function validBulkSale(actor,items){
+  const available=new Set(sellEntries(actor).map(entry=>entry.item));
+  return Array.isArray(items)&&items.length>0&&new Set(items).size===items.length&&[...items].every(item=>available.has(item));
+}
 export const bagFits=(actor,id)=>actor.data.inventory.bag.includes(null)||byId('items',id).stackable&&actor.data.inventory.bag.some(i=>i?.templateId===id);
 // Read-only offers keep availability and prices identical for resolution and UI.
 export function shopOffers(actor,state){
@@ -31,11 +59,12 @@ export function economyChoices(world,actor,state,add){
   const gold=resources(actor).gold;
   for(const offer of shopOffers(actor,state))if(!offer.reason){const {op,...params}=offer.params;
     add(op,op==='buy'?`Buy ${definitionOf(offer.item).label} — ${offer.cost}G (${offer.quantity} in stock)`
-      :`Buy used ${definitionOf(offer.item).label} DUR ${offer.item.durability??'—'} — ${offer.cost}G`,params);}
-  for(const container of ['bag','equipped'])actor.data.inventory[container].forEach((item,slot)=>{if(item&&sellPrice(item)>0)add('sell',`Sell ${definitionOf(item).label} — ${sellPrice(item)}G each`,{container,slot,id:item.id});});
-  if(actor.data.inventory.chest)add('sell',`Sell worn Chest Armor — ${sellPrice(actor.data.inventory.chest)}G`,{container:'chest',id:actor.data.inventory.chest.id});
+      :`Buy used ${definitionOf(offer.item).label}${definitionOf(offer.item).maxDurability ? ` DUR ${offer.item.durability}` : ''} — ${offer.cost}G`,params);}
+  const entries=sellEntries(actor);
+  for(const entry of entries.filter(entry=>entry.params.container))add('sell',entry.params.container==='chest'
+    ?`Sell worn Chest Armor — ${entry.unit}G`:`Sell ${byId('items',entry.item).label} — ${entry.unit}G each`,entry.params);
   for(const group of ['materials','valuables']) for(const [id,quantity]of Object.entries(actor.data.holdings?.[group]??{}))if(quantity){
-    add('sell-holding',`Sell ${byId('items',id).label} — ${byId('items',id).sellValue}G`,{group,item:id});
+    if(entries.some(entry=>entry.params.group===group&&entry.item===id))add('sell-holding',`Sell ${byId('items',id).label} — ${byId('items',id).sellValue}G`,{group,item:id});
     if(group==='materials'&&!state.knownMaterials.includes(id))add('turn-in',`Turn in one ${byId('items',id).label} — discover recipes`,{item:id});
   }
   for(const recipe of catalog.recipes)if(recipe.materials.every(m=>state.knownMaterials.includes(m.item))&& (recipe.service==='shop'||state.blacksmithExists===true)
@@ -46,6 +75,27 @@ export function economyChoices(world,actor,state,add){
 export function resolveEconomy(ctx,operation,p,rng){
   const {actor,state,day}=ctx,r=resources(actor),inv=actor.data.inventory;
   const give=(id,count=1)=>offerLoot({actor,expedition:{pendingLoot:[]}},id,count);
+  if(operation==='sell-bulk'){
+    if(!validBulkSale(actor,p.items))throw new Error('Selected sale unavailable');
+    const entries=sellEntries(actor).filter(entry=>p.items.includes(entry.item));
+    const total=entries.reduce((sum,entry)=>sum+entry.quantity*entry.unit,0);
+    for(const entry of entries){
+      const {container,slot,group}=entry.params;
+      if(group){
+        actor.data.holdings[group][entry.item]=0;
+        if(group==='valuables')(actor.data.memories??=[]).push({actor:actor.id,year:ctx.world.globals.hearthvaleSurface.calendar.year,day,
+          event:`Sold ${byId('items',entry.item).label}`,kind:'sell-holding',item:entry.item,quantity:entry.quantity,gold:entry.quantity*entry.unit});
+      }else{
+        const item=container==='chest'?inv.chest:inv[container][slot],d=definitionOf(item);
+        if(['weapon','shield','armor'].includes(d.category))state.used.push({...item,soldDay:day});
+        else if(Object.hasOwn(state.stock,d.id))state.stock[d.id]+=entry.quantity;
+        if(container==='chest')inv.chest=null;else inv[container][slot]=null;
+      }
+    }
+    r.gold+=total;
+    state.lastResult=`Sold ${entries.map(entry=>`${entry.quantity}× ${byId('items',entry.item).label}`).join(', ')} for ${total}G. Gold: ${r.gold}. No AP spent.`;
+    return;
+  }
   if(operation==='buy'){const d=byId('items',p.item),stock=catalog.vendors[0].stock.find(s=>s.item===p.item);
     if(!stock||state.stock[p.item]<=stock.floor||r.gold<price(actor,d.price)||d.category!=='ammo'&&!bagFits(actor,p.item))throw new Error('Purchase unavailable');
     r.gold-=price(actor,d.price);state.stock[p.item]--;if(d.category==='ammo')r.arrows++;else give(p.item);}
@@ -67,6 +117,9 @@ export function resolveEconomy(ctx,operation,p,rng){
     if(operation==='turn-in')(state.materialRecords??=[]).push(record);
   }
   state.lastResult=`${operation.replaceAll('-',' ')} completed. No AP spent.`;
+  if(operation==='sell-holding')state.lastResult=`Sold ${byId('items',p.item).label} from Collectables for ${byId('items',p.item).sellValue}G. Gold: ${r.gold}. No AP spent.`;
+  if(operation==='turn-in')state.lastResult=`Turned in ${byId('items',p.item).label} from Collectables. Discovered recipes: ${catalog.recipes.filter(recipe=>recipe.materials.some(m=>m.item===p.item)).map(recipe=>recipe.label).join(', ') || 'none'}. No AP spent.`;
+  if(operation==='buy')state.lastResult=`Bought ${byId('items',p.item).label} for ${price(actor,byId('items',p.item).price)}G; added to ${byId('items',p.item).category==='ammo'?'Arrows':'Bag'}. Gold: ${r.gold}. No AP spent.`;
 }
 export function advanceEconomy(world,nextDay,state=economyState(world)){const oldStock={...state.stock},oldUsed=state.used;
   state.used=state.used.filter(i=>nextDay-i.soldDay<15);

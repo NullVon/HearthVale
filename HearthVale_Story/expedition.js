@@ -17,7 +17,7 @@ export function equipmentEffectText(effects) {
     effect_damage: `${value} damage`,
     effect_impact: `${value} Impact`,
     effect_heal: `Restore up to ${value} HP`,
-    effect_defense: `Barrier ${value} for this round`,
+    effect_defense: `Barrier ${value} until the next enemy offensive action resolves; no Stability bonus`,
     effect_cure: 'Cure Poison',
     effect_expedition_hp: `+${value} Max HP for this expedition`,
     effect_unlock: 'Open a locked container or door during exploration',

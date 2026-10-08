@@ -126,12 +126,12 @@ test('M4F real player first clear unlocks progression only once, then weekly res
   assert.equal(createSurfaceGame({saved:g.save()}).save(),g.save());
 });
 
-test('M4F legacy two-discovery-tail Square placement remains a valid saved Floor',()=>{
+test('M4F legacy two-discovery-tail no longer shifts Square placement and remains a valid saved Floor',()=>{
   const g=setup(entered(),(ctx,rng)=>{ctx.pit.sunkenSquare={floor:5,pending:true,remaining:2};
     ctx.expedition.floor=routeFloor(ctx,5,1,['discovery','discovery'],rng);ctx.expedition.roomIndex=0;ctx.expedition.deepestFloor=5;
   });
-  assert.equal(pit(g).expedition.floor.rooms[1].encounter,'loc_sunken_square');
-  assert.equal(pit(g).expedition.floor.rooms[1].resolved,false);
+  assert.equal(pit(g).expedition.floor.rooms[0].encounter,'loc_sunken_square');
+  assert.equal(pit(g).expedition.floor.rooms[0].resolved,false);
   assert.doesNotThrow(()=>validateExpeditionState(worldOf(g)));
   assert.equal(createSurfaceGame({saved:g.save()}).save(),g.save());
 });

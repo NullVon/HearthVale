@@ -1,8 +1,10 @@
+import { changeSanity } from './sanity.js';
 import { byId } from '../../HearthVale_Content/expedition.js';
 import { currentRoom } from './expedition-generation.js';
 import { noncombatCheck, applyPoison } from './expedition-checks.js';
 import { awardRoom, offerLoot } from './expedition-loot.js';
-import { resources, paySpell, consume } from './expedition-equipment.js';
+import { resources, paySpell } from './expedition-equipment.js';
+import { resolveSpellPressure } from './magic-pressure.js';
 import { derivedActorValues } from './surface-candidates.js';
 import { completeReturn } from './expedition-lifecycle.js';
 import { resolveEvent } from './expedition-events.js';
@@ -12,7 +14,7 @@ import { hasTrait } from './expedition-checks.js';
 export function hazardCheckSpecification(actor,hazard,approach){
   const selected=hazard[approach];
   const advantage=hazard.advantageFrom.some(id=>actor.data.inventory.equipped.some(item=>item?.templateId===id)||actor.data.inventory.spells.includes(id));
-  return {...selected,advantage,scope:hazard.id==='hazard_spore_pocket'?'biological':selected.stat==='CON'?'resilience':selected.stat==='DEX'?'escape':''};
+  return {...selected,advantage,scope:selected.scope??(hazard.id==='hazard_spore_pocket'?'biological':selected.stat==='CON'?'resilience':selected.stat==='DEX'?'escape':'')};
 }
 
 export function resolveRoom(ctx, approach, rng, unlocked = false) {
@@ -27,7 +29,9 @@ export function resolveRoom(ctx, approach, rng, unlocked = false) {
   }
   if(room.encounter==='loc_sunken_square') {
     const result=resolveSquare(ctx);
-    room.resolved=true; room.rewards=result.rewards;
+    // Named discoveries still resolve a non-empty room under the Phase 5 economy.
+    result.rewards.push(...awardRoom(ctx,room,rng));
+    room.rewards=result.rewards;
     ctx.expedition.lastResult=result;ctx.noncombatCompleted=true;return;
   }
   if (room.family === 'hazard') {
@@ -40,9 +44,10 @@ export function resolveRoom(ctx, approach, rng, unlocked = false) {
     }
     if (!roll.success) for (const effect of hazard.failure) {
       if (effect.tag === 'effect_damage') { resources(ctx.actor).hp = Math.max(0, resources(ctx.actor).hp - effect.value); text += ` ${effect.value} HP lost.`; }
+      if (effect.tag === 'effect_sanity') text += ` ${changeSanity(ctx.actor,effect.value,hazard.label)}`;
       if (effect.tag === 'effect_poison') text += ` ${applyPoison(ctx.actor, rng)}`;
     }
-    if(!roll.success && hazard.fire && hasTrait(ctx.actor,'pyrophobic')) {resources(ctx.actor).sanity=Math.max(0,resources(ctx.actor).sanity-1);text+=' Pyrophobic: 1 Sanity lost.';}
+    if(!roll.success && hazard.fire && hasTrait(ctx.actor,'pyrophobic')) {text+=` ${changeSanity(ctx.actor,-1,'Pyrophobic — fire')}`;}
     if(hazard.reward && resources(ctx.actor).hp>0) extra.push(offerLoot(ctx,'item_old_coin_purse'));
   } else if (room.encounter === 'm2_locked_coffer') {
     if (!unlocked && approach !== 'leave') roll = noncombatCheck(ctx, { stat: 'DEX', dc: 11 }, rng);
@@ -61,12 +66,21 @@ export function resolveRoom(ctx, approach, rng, unlocked = false) {
   ctx.noncombatCompleted = true;
 }
 
-export function explorationSpell(ctx, spellId, rng, scrollSlot = null) {
+export function explorationSpell(ctx, spellId, rng, scrollSlot = null, scrollContainer = 'equipped') {
   const spell = byId('spells', spellId);
   const cost = scrollSlot === null ? paySpell(ctx.actor, ctx.expedition, spell) : 0;
-  if (scrollSlot !== null) consume(ctx.actor, 'equipped', scrollSlot, rng);
+  if (scrollSlot !== null) {
+    const item=ctx.actor.data.inventory[scrollContainer][scrollSlot];
+    if(--item.quantity===0)ctx.actor.data.inventory[scrollContainer][scrollSlot]=null;
+  }
   ctx.expedition.lastResult = { text: `${spell.label} cast.`, cost };
-  if (spell.id === 'spell_teleport') completeReturn(ctx, 'teleport');
-  else if (spell.id === 'spell_heal') resources(ctx.actor).hp = Math.min(derivedActorValues(ctx.actor).maxHp, resources(ctx.actor).hp + 8);
+  if (spell.id === 'spell_heal') resources(ctx.actor).hp = Math.min(derivedActorValues(ctx.actor).maxHp, resources(ctx.actor).hp + 8);
   else if (spell.id === 'spell_unlock') resolveRoom(ctx, currentRoom(ctx.expedition).encounter==='event_locked_bedroom'?'choice_locked_bedroom_unlock':'unlock', rng, true);
+  if(scrollSlot===null) {
+    const pressure=resolveSpellPressure(ctx.actor,ctx.expedition,rng);
+    Object.assign(ctx.expedition.lastResult,{cost,overcast:pressure.check,
+      text:`${ctx.expedition.lastResult.text} ${pressure.text}`});
+  }
+  // The normal post-action death boundary must run before a lethal extraction.
+  if(spell.id==='spell_teleport'&&resources(ctx.actor).sanity>0)completeReturn(ctx,'teleport');
 }

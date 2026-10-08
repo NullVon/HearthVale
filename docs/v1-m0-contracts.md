@@ -1,5 +1,8 @@
 # HearthVale V1 M0 contracts
 
+> Historical revision record. Rules, completion status, and test counts describe this revision; see [documentation guide](README.md) for later corrections and current verification.
+
+
 ## Authored data validation
 
 Use `HearthVale_Content/validation.js` to call `validateCatalog(catalog, { resolvers })` before installing authored data into a V1 runtime. Use `validateCandidate(profile, catalog, { resolvers })` for generated candidate output before presentation/selection. Neither function changes input. Invalid data throws ContentValidationError with an aggregated list of field paths and reasons.

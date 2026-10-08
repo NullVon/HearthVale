@@ -30,9 +30,9 @@ test('M6C1 visible shop offers share legal eligibility, including protected and 
   const location=surfaceLocation(w,a,html);assert.ok(location.indexOf('Formal Turn-In')<location.indexOf('>Leave<'));
   assert.equal(g.save(),before);
 });
-test('M6C1 combat exposes phase/range/cost/restrictions without hidden Stability or navigation',()=>{
+test('M6C1 combat exposes costs and restrictions without range, hidden Stability or navigation',()=>{
   const g=combatFixture(),html=expeditionView(world(g),player(g),g.expeditionChoices());
-  assert.match(html,/Cannot Block/);assert.match(html,/Requires FAR/);assert.match(html,/Dodge DEX vs DC/);
+  assert.match(html,/Cannot Block/);assert.doesNotMatch(html,/NEAR|FAR|Range/);assert.match(html,/Speed \+1/);assert.doesNotMatch(html,/Dodge DEX vs DC/);
   assert.match(html,/regenerates its start/);assert.doesNotMatch(html,/Stability|data-command="move"/);
   const returned=setup(g,ctx=>{ctx.expedition.combat.kind='return';});
   assert.match(expeditionView(world(returned),player(returned),returned.expeditionChoices()),/Retreat is unavailable/);
@@ -40,7 +40,7 @@ test('M6C1 combat exposes phase/range/cost/restrictions without hidden Stability
 test('M6C1 hazard preview and resolution use one specification and preserve exact reload',()=>{
   const g=setup(entered(),ctx=>roomFixture(ctx,'hazard','hazard_blocked_passage'));
   const spec=hazardCheckSpecification(player(g),byId('hazards','hazard_blocked_passage'),'primary');
-  const html=expeditionView(world(g),player(g),g.expeditionChoices());
+  const html=expeditionView(world(g),player(g),g.expeditionChoices(),'weapons',0,true);
   assert.match(html,new RegExp(`vs DC ${spec.dc}`));
   if(spec.advantage)assert.match(html,/Advantage/);
   g.perform('pit.resolve-room',{approach:'primary'});

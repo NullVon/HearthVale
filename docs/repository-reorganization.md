@@ -1,5 +1,8 @@
 # Repository reorganization
 
+> Historical revision record. Rules, completion status, and test counts describe this revision; see [documentation guide](README.md) for later corrections and current verification.
+
+
 The current Shell implementation is now under `HearthVale_Shell`. This is a path-only reorganization; game rules, fixture values, save schema, and Core integration behavior are unchanged. Milestone 3 has not begun.
 
 ## Moved files

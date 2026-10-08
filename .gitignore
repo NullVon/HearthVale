@@ -1,6 +1,28 @@
 node_modules/
+/coverage/
 .DS_Store
 Thumbs.db
 
 # Generated mobile web bundle
 www/
+
+# Local release validation and packaged output
+/*-validation/
+/artifacts/
+*.log
+*.apk
+*.aab
+*.jks
+*.keystore
+
+# Local caches and credentials
+/.pnpm-store/
+.env
+.env.*
+!.env.example
+*.bak
+*.orig
+*~
+~$*.docx
+*.swp
+*.swo

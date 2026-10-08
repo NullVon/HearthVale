@@ -104,9 +104,10 @@ test('M1 generation across 300 deterministic seeds respects stat, Trait, name, e
       assert.equal(r.hp, derivedActorValues(actor).maxHp);
     }
   }
-  assert.equal(combinations.size, 3); assert.equal(traitIds.size, 23);
-  assert.ok(spells > 220 && spells < 320, `spell sample ${spells}/900`);
-  for (const count of Object.values(spellCounts)) assert.ok(count > 40 && count < 100);
+  assert.equal(combinations.size, 4); assert.equal(traitIds.size, 23);
+  assert.equal(spells,300);
+  assert.equal(spellCounts.spell_fireball,300);
+  for (const [id,count] of Object.entries(spellCounts)) if(id!=='spell_fireball')assert.equal(count,0);
   assert.ok(rare > 3 && rare < 35, `rare sample ${rare}/1800 draws`);
 });
 

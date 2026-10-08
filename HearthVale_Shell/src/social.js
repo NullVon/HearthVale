@@ -1,3 +1,4 @@
+import { changeSanity } from './sanity.js';
 import { selectDialogue } from '../../HearthVale_Story/dialogue.js';
 import { heldInformation } from './information.js';
 export function storyKnowledge(world,actor){return heldInformation(world,actor.id).map(e=>({subject:e.claim.value?.templateId??e.claim.subject,tag:e.claim.value?.tag??e.claim.key,state:e.claim.certainty==='certain'?'Known':'Rumor'}));}
@@ -10,9 +11,14 @@ export function talk(ctx,target,firstOnly=false){
   if(line.reset)actor.data.dialogueUsed=actor.data.dialogueUsed.filter(key=>!line.pool.some(id=>key===`${day}:${id}`));
   actor.data.dialogueUsed.push(`${day}:${line.id}`);
   if(line.once)actor.data.dialogueUsed.push(`once:${line.id}`);
-  if(!firstOnly){actor.data.talkCount=(actor.data.talkCount??0)+1;const required=actor.data.attributes.traits.includes('trait_frail')?4:5;
-    if(actor.data.talkCount>=required){actor.data.talkCount=0;const r=actor.data.attributes.resources;r.sanity=Math.min(r.maxSanity,r.sanity+1);}}
-  ctx.state.lastResult=`${first?'First meeting. ':''}${target.data.identity.name}: “${line.text}”`;
+  const year=ctx.world.globals.hearthvaleSurface.calendar.year, r=actor.data.attributes.resources;
+  const used=actor.data.sanityTalkRecovery;
+  let recovery='';
+  if(!firstOnly && actor.id===ctx.world.globals.hearthvaleSurface.playerId && r.sanity>0 && r.sanity<r.maxSanity && !(used?.year===year && used?.day===day)) {
+    actor.data.sanityTalkRecovery={year,day};
+    recovery=changeSanity(actor,1,'The conversation helps you feel grounded again');
+  }
+  ctx.state.lastResult=`${first?'First meeting. ':''}${target.data.identity.name}: “${line.text}”${recovery ? ` ${recovery}` : ''}`;
   ctx.state.lastResultActor=actor.id;
 }
 export function scheduledMeetings(world,actor,nextDay,state){

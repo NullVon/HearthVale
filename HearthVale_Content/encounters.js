@@ -1,13 +1,16 @@
 export const enemyWeights=[['enemy_slime',30],['enemy_cave_beetle',25],['enemy_pit_hound',20],['enemy_venom_spider',15],['enemy_frenzied_adventurer',10]].map(([target,weight])=>({target,weight}));
 export function addEncounters(c) {
-  const move=(id,label,range,damage,impact,dodgeDC,stability,movement='none')=>({id:`move_${id}`,label,range,damage,impact,dodgeDC,stability,movement,onHit:[]});
-  c.moves.push(move('hound_bite','Hound Bite','NEAR',4,1,14,1),move('hound_maul','Hound Maul','NEAR',5,2,11,2),move('hound_pounce','Pounce — leap to NEAR','FAR',3,1,14,1,'NEAR'),move('wild_slash','Wild Slash','NEAR',4,1,11,2),move('reckless_swing','Reckless Swing','NEAR',5,2,8,2),move('rock_throw','Rock Throw','FAR',3,1,11,1),move('brute_swing','Basic Swing','NEAR',5,2,11,2),move('brute_heavy','Heavy Swing — a raised, crushing blow','NEAR',7,4,8,3));
+  const move=(id,label,damage,impact,dodgeDC,stability)=>({id:`move_${id}`,label,damage,impact,dodgeDC,stability,onHit:[],
+    speed: ({hound_bite:1,hound_maul:-1,hound_pounce:1,reckless_swing:-1,brute_heavy:-1})[id] ?? 0,
+    qualityStat: ['hound_pounce','rock_throw'].includes(id) ? 'DEX' : 'STR'});
+  c.moves.push(move('hound_bite','Hound Bite',4,1,14,1),move('hound_maul','Hound Maul',5,2,11,2),move('hound_pounce','Pounce',3,1,14,1),move('wild_slash','Wild Slash',4,1,11,2),move('reckless_swing','Reckless Swing',5,2,8,2),move('rock_throw','Rock Throw',3,1,11,1),move('brute_swing','Basic Swing',5,2,11,2),move('brute_heavy','Heavy Swing — a raised, crushing blow',7,4,8,3));
   const selection=entries=>({kind:'exclusive',entries:entries.map(([id,weight])=>({target:`move_${id}`,weight}))});
   c.enemies.push(...[
-    ['pit_hound','Pit Hound',8,0,14,4,[{item:'item_beast_fang',chance:45,quantity:1}],[['hound_bite',65],['hound_maul',35]],[['hound_pounce',100]],false],
-    ['frenzied_adventurer','Frenzied Adventurer',12,1,11,6,[],[['wild_slash',70],['reckless_swing',30]],[['rock_throw',50],['close',50]],false],
-    ['ruin_brute','Ruin Brute',24,2,8,20,[],[['brute_swing',70],['brute_heavy',30]],[['close',100]],true],
-  ].map(([id,label,hp,defense,attackDC,xp,harvest,near,far,guardian])=>({id:`enemy_${id}`,label,hp,defense,attackDC,xp,harvest,near:selection(near),far:selection(far),guardian})));
+    ['pit_hound','Pit Hound',8,0,14,4,[{item:'item_beast_fang',chance:45,quantity:1}],[['hound_bite',50],['hound_maul',30],['hound_pounce',20]],false],
+    ['frenzied_adventurer','Frenzied Adventurer',12,1,11,6,[],[['wild_slash',50],['reckless_swing',25],['rock_throw',25]],false],
+    ['ruin_brute','Ruin Brute',24,2,8,20,[],[['brute_swing',70],['brute_heavy',30]],true],
+  ].map(([id,label,hp,defense,attackDC,xp,harvest,moves,guardian])=>({id:`enemy_${id}`,label,hp,defense,attackDC,xp,harvest,moves:selection(moves),guardian,
+    combatStats: ({pit_hound:{STR:3,DEX:4},frenzied_adventurer:{STR:3,DEX:2},ruin_brute:{STR:4,DEX:1}})[id]})));
   const specs=[
     ['blocked_passage','Blocked Passage','STR',11,null,null,2,['item_hammer','item_fang_hammer','item_iron_hammer','spell_force']],
     ['flooded_cellar','Flooded Cellar','CON',11,'WIS',14,3,[]],

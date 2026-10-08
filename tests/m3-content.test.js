@@ -17,7 +17,7 @@ import { floorTail } from '../HearthVale_Shell/src/expedition-generation.js';
 import { storyKnowledge } from '../HearthVale_Shell/src/social.js';
 
 test('M3 full catalogs validate; all canonical equipment/spells/Traits/enemies/hazards/Events/recipes exist',()=>{
-  validateCatalog(catalog);assert.equal(catalog.traits.length,23);assert.equal(catalog.spells.length,6);assert.equal(catalog.enemies.length,6);assert.equal(catalog.hazards.length,10);assert.equal(catalog.events.length,8);assert.equal(catalog.recipes.length,14);
+  validateCatalog(catalog);assert.equal(catalog.traits.length,23);assert.equal(catalog.spells.length,6);assert.equal(catalog.enemies.length,7);assert.equal(catalog.hazards.length,11);assert.equal(catalog.events.length,11);assert.equal(catalog.recipes.length,14);
   assert.equal(catalog.items.filter(i=>i.category==='valuable'&&i.id!=='item_m2_keepsake').length,8);
   assert.equal(catalog.items.filter(i=>i.category==='material').length,9);
   const broken=structuredClone(catalog);broken.recipes[0].materials[0].item='missing';assert.throws(()=>validateCatalog(broken));
@@ -75,17 +75,17 @@ test('M3 all hazards and alternate/triggered approaches resolve once and save ex
     assert.equal(createSurfaceGame({saved:game.save()}).save(),game.save());assert.equal(game.expeditionChoices().some(c=>c.type==='pit.resolve-room'),false);
   }
 });
-test('M3 all eight Events and their choices are reachable with saved one-time consequences',()=>{
+test('M3 all authored Events and their choices are reachable with saved one-time consequences',()=>{
   for(const event of catalog.events)for(const choice of event.choices.filter(c=>!c.id.endsWith('_unlock'))){
     const game=setup(entered(),ctx=>{roomFixture(ctx,'event',event.id);ctx.actor.data.attributes.resources.hp=100;});
-    use(game,'pit.resolve-room',c=>c.params.approach===choice.id);assert.equal(pit(game).eventHistory.at(-1).choice,choice.id);
+    use(game,'pit.resolve-room',c=>c.params.approach===choice.id);if(event.subjective)assert.equal(pit(game).eventHistory,undefined);else assert.equal(pit(game).eventHistory.at(-1).choice,choice.id);
     assert.equal(expedition(game).floor.rooms[0].resolved,true);assert.equal(createSurfaceGame({saved:game.save()}).save(),game.save());
   }
 });
-test('M3 five ordinary enemies plus Brute use authored NEAR/FAR behavior; Hound Pounce moves and attacks',()=>{
+test('M3 five ordinary enemies plus Brute use unified move pools; Hound Pounce attacks without movement',()=>{
   const ctx=context();for(const enemy of catalog.enemies){startCombat(ctx,enemy.id,'room',dice(0));assert.ok(ctx.expedition.combat.committed);}
   startCombat(ctx,'enemy_pit_hound','room',dice(0));ctx.expedition.combat.range='FAR';ctx.expedition.combat.committed={...byId('moves','move_hound_pounce'),offensive:true,damageType:'physical'};
-  defend(ctx,'dodge',null,dice(0));assert.equal(ctx.expedition.combat.range,'NEAR');assert.ok(ctx.expedition.lastResult.damage>0);
+  defend(ctx,'dodge',null,dice(.99));assert.equal(ctx.expedition.combat.range,'FAR');assert.equal(ctx.expedition.lastResult.damage,2); // Critical 5 minus passive armor 3.
 });
 test('M3 Sunken Square guarantee, finder/date, shortcut and finite pool survive repeated expeditions',()=>{
   let game=setup(entered(),(ctx,rng)=>{ctx.expedition.floor=routeFloor(ctx,9,1,[],dice(.99));ctx.expedition.deepestFloor=9;ctx.expedition.roomIndex=0;});
@@ -107,8 +107,6 @@ test('M3 production routes guarantee Square by Floor 9 while preserving all proc
       return [{type:'fixture.route',effects:[{type:'global',key:'floors',value:floors}]}];
     }}});runtime.startScene();runtime.resolveScene();const floors=runtime.snapshot().world.globals.floors;
     assert.equal(floors.flatMap(f=>f.rooms).filter(r=>r.encounter==='loc_sunken_square').length,1);
-    const families=floors.flatMap(f=>f.rooms.map(r=>r.family));
-    for(let i=2;i<families.length;i++)assert.ok(!(families[i]===families[i-1]&&families[i]===families[i-2]));
     for(const floor of floors){assert.ok([3,4].includes(floor.rooms.length));assert.ok(floor.rooms.filter(r=>r.family==='combat').length<=2);assert.equal(new Set(floor.rooms.map(r=>r.encounter)).size,floor.rooms.length);}
   }
 });
@@ -144,18 +142,18 @@ test('M3 zero-Sanity fire consequence adjudicates death without implementing suc
   use(game,'pit.resolve-room',c=>c.params.approach==='primary');assert.equal(player(game).data.death.cause,'sanity');assert.equal(pit(game).pendingDeath,null);assert.equal(pit(game).expedition,null);
   assert.equal(game.serviceChoices().length,0);assert.equal(game.expeditionChoices().length,0);assert.throws(()=>game.perform('Move',{location:'loc_inn'}));assert.equal(createSurfaceGame({saved:game.save()}).save(),game.save());
 });
-test('M3 Crystal Bow spends ammo and DUR on miss and cannot Block; all gear templates retain authored properties',()=>{
+test('M3 Crystal Bow spends ammo but has no DUR and cannot Block; all gear templates retain authored properties',()=>{
   const game=setup(entered(),(ctx,rng)=>{roomFixture(ctx);ctx.actor.data.inventory.equipped=[item(ctx.actor,'item_crystal_bow'),null,null,null];ctx.actor.data.attributes.resources.arrows=3;startCombat(ctx,'enemy_pit_hound','room',rng);ctx.expedition.combat.range='FAR';});
-  use(game,'pit.attack');assert.equal(player(game).data.attributes.resources.arrows,2);assert.equal(player(game).data.inventory.equipped[0].durability,13);assert.equal(game.expeditionChoices().some(c=>c.params.mode==='block'),false);
+  use(game,'pit.attack');assert.equal(player(game).data.attributes.resources.arrows,2);assert.equal(player(game).data.inventory.equipped[0].durability,undefined);assert.equal(game.expeditionChoices().some(c=>c.params.mode==='block'),false);
   const copy=structuredClone(player(game));
   for(const recipe of catalog.recipes){const d=byId('items',recipe.output);assert.ok(d);if(d.maxDurability)assert.equal(item(copy,d.id).durability,d.maxDurability);}
-  const ctx=context();ctx.actor.data.inventory.equipped[0]=item(ctx.actor,'item_crystal_bow');ctx.actor.data.attributes.baseStats.DEX=1;ctx.actor.data.attributes.resources.arrows=3;startCombat(ctx,'enemy_pit_hound','room',dice(0));ctx.expedition.combat.range='FAR';attackWeapon(ctx,0,dice(0));assert.equal(ctx.expedition.lastResult.check.success,false);assert.equal(ctx.actor.data.attributes.resources.arrows,2);assert.equal(ctx.actor.data.inventory.equipped[0].durability,13);
+  const ctx=context();ctx.actor.data.inventory.equipped[0]=item(ctx.actor,'item_crystal_bow');ctx.actor.data.attributes.baseStats.DEX=1;ctx.actor.data.attributes.resources.arrows=3;startCombat(ctx,'enemy_pit_hound','room',dice(0));ctx.expedition.combat.range='FAR';attackWeapon(ctx,0,dice(0));assert.equal(ctx.expedition.lastResult.dodge.success,true);assert.equal(ctx.actor.data.attributes.resources.arrows,2);assert.equal(ctx.actor.data.inventory.equipped[0].durability,undefined);
 });
 test('M3 learned Unlock resolves authored bedroom once; Scrolls and Tomes exist for every spell',()=>{
   const game=setup(entered(),ctx=>{roomFixture(ctx,'event','event_locked_bedroom');ctx.actor.data.inventory.spells[0]='spell_unlock';ctx.actor.data.attributes.resources.essence=20;});use(game,'pit.cast');assert.equal(expedition(game).floor.rooms[0].resolved,true);assert.equal(expedition(game).strain,1);assert.equal(game.expeditionChoices().some(c=>c.type==='pit.cast'),false);
   for(const spell of catalog.spells)for(const type of ['scroll','tome'])assert.equal(byId('items',`item_${type}_${spell.id.slice(6)}`).spell,spell.id);
 });
-test('M3 Story priority/knowledge guards, first meeting and nonrepeating daily pool; Frail Talk recovery',()=>{
+test('M3 Story priority/knowledge guards, first meeting and nonrepeating daily pool; daily Talk recovery (including Frail)',()=>{
   const game=surfaceFixture((w,a)=>{a.data.attributes.traits=['trait_frail','trait_curious'];a.data.attributes.resources.sanity=3;});
   const before=player(game).data.relationships;service(game,'talk');const first=economyState(world(game)).lastResult;service(game,'talk');assert.notEqual(economyState(world(game)).lastResult,first);service(game,'talk');service(game,'talk');assert.equal(player(game).data.attributes.resources.sanity,4);assert.deepEqual(player(game).data.relationships,before);
   const speaker=Object.values(world(game).entities).find(a=>a.data?.templateId==='actor_tavi'),base=catalog.dialogues.find(d=>d.actor==='actor_tavi');

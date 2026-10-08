@@ -4,19 +4,20 @@ import { derivedActorValues } from './surface-candidates.js';
 
 export const definitionOf = item => item ? byId('items', item.templateId) : null;
 export const resources = actor => actor.data.attributes.resources;
-export function spellCost(actor, expedition, spell) {
-  return spell.cost + Math.max(0, expedition.strain - actor.data.attributes.baseStats.INT);
+export function spellCost(actor, expedition) {
+  // Phase 5: strain is the saved expedition-wide Learned Cast Count.
+  // Legacy authored spell.cost values do not control learned casting.
+  return 2 ** Math.max(0, expedition.strain - actor.data.attributes.baseStats.INT + 1);
 }
 export function paySpell(actor, expedition, spell) {
   const cost = spellCost(actor, expedition, spell);
   if (resources(actor).essence < cost) throw new Error('Insufficient Essence');
   resources(actor).essence -= cost;
-  expedition.strain++;
   return cost;
 }
 export function wear(actor, slot, amount, rng) {
   const item = actor.data.inventory.equipped[slot];
-  if (!item || item.durability === undefined) return null;
+  if (!item || !definitionOf(item)?.maxDurability || item.durability === undefined) return null;
   const prevented = hasTrait(actor, 'sturdy_hands') && rng.next() < 0.5 ? 1 : 0;
   const loss = Math.max(0, amount - prevented);
   item.durability = Math.max(0, item.durability - loss);
@@ -49,12 +50,12 @@ export function useBag(actor, slot, rng) {
     if (effect.tag === 'effect_cure') delete actor.data.statuses.poison;
     if (effect.tag === 'effect_expedition_hp') actor.data.expeditionHp=effect.value;
   }
-  return { text: `${definition.label} used (${spent} consumed).`, item: definition.id, spent };
+  return { text: `${definition.label} used (${spent} consumed).${definition.effects.some(effect=>effect.tag==='effect_cure') ? ' Poison cured.' : ''}`, item: definition.id, spent };
 }
 export function swap(actor, equipped, bag) {
   const inventory = actor.data.inventory;
   const item = inventory.bag[bag], definition = definitionOf(item);
-  if (item && !['weapon', 'shield', 'scroll'].includes(definition.category)) throw new Error('Item cannot be equipped');
+  if (item && !['weapon', 'shield'].includes(definition.category)) throw new Error('Item cannot be equipped');
   if (!item && !inventory.equipped[equipped]) throw new Error('Both slots are empty');
   [inventory.equipped[equipped], inventory.bag[bag]] = [item, inventory.equipped[equipped]];
 }

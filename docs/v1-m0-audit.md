@@ -1,5 +1,8 @@
 # V1 M0 repository audit and implementation plan
 
+> Historical revision record. Rules, completion status, and test counts describe this revision; see [documentation guide](README.md) for later corrections and current verification.
+
+
 Read before implementation: all five September 11 V1 VS documents (Mechanics, Content, Story, UI/UX Guide, Implementation Brief). The Master Design is context, not a replacement authority.
 
 ## Discovered architecture

@@ -2,6 +2,9 @@
   "appId": "com.nullvon.hearthvale",
   "appName": "HearthVale",
   "webDir": "www",
+  "plugins": {
+    "SystemBars": { "insetsHandling": "css", "hidden": false }
+  },
   "server": {
     "androidScheme": "https"
   }

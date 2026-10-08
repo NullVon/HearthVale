@@ -280,6 +280,8 @@ export const surfaceCatalog = deepFreeze(validateCatalog({
   "items": [
     {
       "id": "item_sword",
+      "speed": 0,
+      "qualityStat": "STR",
       "label": "Sword",
       "category": "weapon",
       "price": 30,
@@ -288,7 +290,6 @@ export const surfaceCatalog = deepFreeze(validateCatalog({
       "maxDurability": 12,
       "impact": 1,
       "accuracy": "STR",
-      "range": "NEAR",
       "tier": 1,
       "stackable": false,
       "canDefend": true,
@@ -300,6 +301,8 @@ export const surfaceCatalog = deepFreeze(validateCatalog({
     },
     {
       "id": "item_hammer",
+      "speed": -1,
+      "qualityStat": "STR",
       "label": "Hammer",
       "category": "weapon",
       "price": 40,
@@ -308,7 +311,6 @@ export const surfaceCatalog = deepFreeze(validateCatalog({
       "maxDurability": 10,
       "impact": 2,
       "accuracy": "STR",
-      "range": "NEAR",
       "tier": 1,
       "stackable": false,
       "canDefend": true,
@@ -320,19 +322,18 @@ export const surfaceCatalog = deepFreeze(validateCatalog({
     },
     {
       "id": "item_bow",
+      "speed": 1,
+      "qualityStat": "DEX",
       "label": "Bow",
       "category": "weapon",
       "price": 35,
       "damage": 3,
       "defense": 0,
-      "maxDurability": 12,
       "impact": 0,
       "accuracy": "DEX",
-      "range": "FAR",
       "tier": 1,
       "stackable": false,
       "canDefend": false,
-      "wear": "every-shot",
       "ammo": "item_arrows",
       "effects": [],
       "contexts": [
@@ -405,10 +406,6 @@ export const surfaceCatalog = deepFreeze(validateCatalog({
       "label": "Fireball",
       "cost": 4,
       "target": "enemy",
-      "ranges": [
-        "NEAR",
-        "FAR"
-      ],
       "accuracy": "INT",
       "effects": [
         {
@@ -424,10 +421,6 @@ export const surfaceCatalog = deepFreeze(validateCatalog({
       "label": "Force",
       "cost": 3,
       "target": "enemy",
-      "ranges": [
-        "NEAR",
-        "FAR"
-      ],
       "accuracy": "INT",
       "effects": [
         {
@@ -443,7 +436,6 @@ export const surfaceCatalog = deepFreeze(validateCatalog({
       "label": "Heal",
       "cost": 4,
       "target": "self",
-      "ranges": [],
       "effects": [
         {
           "tag": "effect_heal",
@@ -458,7 +450,6 @@ export const surfaceCatalog = deepFreeze(validateCatalog({
       "label": "Barrier",
       "cost": 3,
       "target": "self",
-      "ranges": [],
       "effects": [
         {
           "tag": "effect_defense",

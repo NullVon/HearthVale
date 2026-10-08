@@ -3,11 +3,33 @@ import { surfaceCatalog } from '../../HearthVale_Content/surface.js';
 import { diceCheck } from './core.js';
 
 export const hasTrait = (actor, id) => actor.data.attributes.traits.includes(`trait_${id}`);
+
+// Read-only previews and resolution share exactly the same relative-DEX bands.
+export function dodgeChance(defenderDEX, attackerDEX, speed = 0, knockedDown = false) {
+  const difference = defenderDEX - (attackerDEX + speed);
+  return { defenderDEX, attackerDEX, speed, difference, chance: knockedDown ? 0 : Math.min(3, Math.max(0, difference)) * 25,
+    ...(knockedDown ? { knockedDown: true } : {}) };
+}
+
+export function rollDodge(defenderDEX, attackerDEX, speed, rng, knockedDown = false) {
+  const preview = dodgeChance(defenderDEX, attackerDEX, speed, knockedDown);
+  // A guaranteed connection needs no random draw.
+  const roll = preview.chance ? rng.next() : null;
+  return { ...preview, roll, success: roll !== null && roll < preview.chance / 100 };
+}
+
+export function hitQuality(stat, value, damage, rng) {
+  const result = diceCheck({ expression: '1d20', target: 10, modifier: value, rng });
+  const quality = result.total >= 20 ? 'Critical' : result.total >= 10 ? 'Normal' : 'Glancing';
+  const multiplier = { Glancing: 0.5, Normal: 1, Critical: 1.5 }[quality];
+  return { rolls: result.rolls, die: result.keptRolls[0], stat, value, total: result.total,
+    quality, multiplier, rawDamage: Math.ceil(damage * multiplier) };
+}
 export function traitBonus(actor, scope) {
   let bonus = 0;
   if (['resilience', 'biological'].includes(scope)) bonus += constitutionCheckBonus(actor.data.attributes.traits.flatMap(id =>
     surfaceCatalog.traits.find(t => t.id === id)?.effects ?? []), { physicalResilience: true });
-  if (['dodge', 'escape'].includes(scope) && hasTrait(actor, 'quick')) bonus += 2;
+  if (scope === 'escape' && hasTrait(actor, 'quick')) bonus += 2;
   if (scope === 'biological' && hasTrait(actor, 'tough_stomach')) bonus += 2;
   if (['fear', 'mental', 'fire'].includes(scope) && hasTrait(actor, 'strong_willed')) bonus += 2;
   if (scope === 'fear') bonus += (hasTrait(actor, 'fearless') ? 2 : 0) - (hasTrait(actor, 'cowardly') ? 2 : 0);

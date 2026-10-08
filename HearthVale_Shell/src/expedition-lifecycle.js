@@ -1,6 +1,7 @@
+import { changeSanity } from './sanity.js';
 import { byId } from '../../HearthVale_Content/expedition.js';
-import { generateFloor, floorTail, currentRoom, pick } from './expedition-generation.js';
-import { startCombat } from './expedition-combat.js';
+import { generateFloor, floorTail, currentRoom, pick, validateRoomDeck } from './expedition-generation.js';
+import { startCombat, defend, nextCombatPhase, combatPhase } from './expedition-combat.js';
 import { noncombatCheck, tickPoison } from './expedition-checks.js';
 import { awardEnemy, awardRoom } from './expedition-loot.js';
 import { spendSurfaceAp } from './surface-day.js';
@@ -12,6 +13,7 @@ import { recordHeartLoss } from './death.js';
 
 export function validateExpeditionState(world) {
   const pit = world.entities.hv_pit_1?.data, expedition = pit?.expedition;
+  validateRoomDeck(pit);
   if (!expedition) return; // M1 snapshots have no expedition fields to migrate.
   const actor = world.entities[expedition.actor], floor = expedition.floor;
   const integer = (value, min = 0) => Number.isSafeInteger(value) && value >= min;
@@ -25,20 +27,21 @@ export function validateExpeditionState(world) {
     || floor.rooms.filter(r => r.family === 'combat').length > 2
     || new Set(floor.rooms.map(r => r.encounter)).size !== floor.rooms.length)) invalid();
   if (floor.number === 10 && (floor.rooms.length !== 1 || floor.rooms[0].family !== 'fixed')) invalid();
-  const tail = [...floor.prefixTail];
   for (const room of floor.rooms) {
     if (typeof room.resolved !== 'boolean' || !['combat','resource','hazard','treasure','event','empty','discovery','fixed'].includes(room.family)) invalid();
-    if (tail.at(-1) === room.family && tail.at(-2) === room.family) invalid();
-    tail.push(room.family);
   }
   if (!['hp','hearts','ap','arrows','essence','gold','xp'].every(key => integer(resources(actor)[key]))) invalid();
   const combat = expedition.combat;
   if (combat && (!byId('enemies', combat.enemy?.templateId) || !integer(combat.enemy.hp)
-    || !['attack','incoming','cancelled','round-result'].includes(combat.phase)
-    || !['NEAR','FAR'].includes(combat.range) || !['room','return'].includes(combat.kind)
-    || !combat.committed || !['NEAR','FAR'].includes(combat.committed.range)
-    || !['damage','impact','stability','dodgeDC'].every(key => Number.isFinite(combat.committed[key]) && combat.committed[key] >= 0)
-    || !Array.isArray(combat.committed.onHit) || !integer(combat.barrier) || !integer(combat.round, 1))) invalid();
+    || !['attack','incoming','advantage','counterattack','cancelled','round-result'].includes(combat.phase)
+    || !['room','return'].includes(combat.kind)
+    || !combat.committed
+    || !['damage','impact','stability'].every(key => Number.isFinite(combat.committed[key]) && combat.committed[key] >= 0)
+    || (combat.committed.speed !== undefined && !Number.isSafeInteger(combat.committed.speed))
+    || (combat.committed.qualityStat !== undefined && !['STR','DEX'].includes(combat.committed.qualityStat))
+    || !Array.isArray(combat.committed.onHit) || !integer(combat.barrier) || !integer(combat.round, 1)
+    || (combat.spellStrain!==undefined&&!integer(combat.spellStrain))
+    || (combat.scrollStrain!==undefined&&!integer(combat.scrollStrain)))) invalid();
 }
 
 export function enterExpedition(ctx, rng, shortcut = false) {
@@ -48,7 +51,7 @@ export function enterExpedition(ctx, rng, shortcut = false) {
   const sequence = (ctx.pit.expeditionSequence ?? 0) + 1;
   ctx.pit.expeditionSequence = sequence;
   ctx.expedition = ctx.pit.expedition = { id: `hv_expedition_${sequence}`, active: true, actor: ctx.actor.id,
-    floor: generateFloor(1, 1, [], rng), roomIndex: -1, deepestFloor: 1, strain: 0,
+    floor: shortcut ? null : generateFloor(1, 1, [], rng, null, ctx.pit, resources(ctx.actor).sanity), roomIndex: -1, deepestFloor: 1, strain: 0,
     combat: null, pendingLoot: [], returnPending: false, luckyRerollUsed: false, nextEnemyInstance: 1,
     lastResult: { text: 'Entered Stratum 1 — Swallowed HearthVale Ruins. Expedition cost: 1 AP.' } };
   ctx.actor.primaryLocation = ctx.pitId;
@@ -76,7 +79,13 @@ export function forward(ctx, rng) {
     if(person)room.actorId=person.id;
   }
   expedition.lastResult = { text: room ? room.title : `Reached the start of Floor ${expedition.floor.number}.` };
-  if (room?.family === 'combat') startCombat(ctx, room.encounter, 'room', rng);
+  if (room?.family === 'combat') {
+    if (resources(ctx.actor).sanity === 1 && !expedition.manifestationAppeared && expedition.floor.number < 10) {
+      expedition.manifestationAppeared = true;
+      Object.assign(room, {encounter: 'enemy_hollow_double', templateId: 'room_enemy_hollow_double', title: 'The Hollow Double'});
+    }
+    startCombat(ctx, room.encounter, 'room', rng);
+  }
 }
 
 export function regenerateFloor(ctx, rng) {
@@ -91,22 +100,24 @@ export function retreat(ctx, rng) {
   ctx.expedition.lastResult = { text: 'Retreated to a newly generated start of this Floor. No Heart loss or Return Encounter.' };
 }
 
-export function completeReturn(ctx, reason = 'return') {
+export function completeReturn(ctx, reason = 'return', { preservePoison = true, fullHp = false } = {}) {
   const expedition = ctx.expedition;
   resources(ctx.actor).essence = 0;
   ctx.actor.data.expeditionHp=0;
+  if (fullHp) resources(ctx.actor).hp = derivedActorValues(ctx.actor).maxHp;
   resources(ctx.actor).hp=Math.min(resources(ctx.actor).hp,derivedActorValues(ctx.actor).maxHp);
-  if (ctx.actor.data.statuses) delete ctx.actor.data.statuses.poison;
+  if (!preservePoison && ctx.actor.data.statuses) delete ctx.actor.data.statuses.poison;
   ctx.actor.primaryLocation = 'loc_pit_entrance';
   ctx.pit.lastExpedition = { id: expedition.id, reason, deepestFloor: expedition.deepestFloor, day: ctx.day };
-  ctx.pit.lastResult = { ...expedition.lastResult, actor:ctx.actor.id, text: `${expedition.lastResult.text} Expedition ended. Essence and Strain discarded; Poison cleared.` };
+  ctx.pit.lastResult = { ...expedition.lastResult, actor:ctx.actor.id, day:ctx.day, year:ctx.year ?? 1,
+    text: `${expedition.lastResult.text} Expedition ended. Unused Essence lost; casting pressure reset.${preservePoison ? '' : ' Poison cleared.'}` };
   ctx.pit.expedition = null;
 }
 
 export function requestReturn(ctx, rng) {
   const depth = ctx.expedition.deepestFloor, dc = depth <= 3 ? 8 : depth <= 6 ? 11 : 14;
   const result = noncombatCheck(ctx, { stat: 'WIS', dc, scope: 'return' }, rng);
-  const known = (ctx.pit.knownEnemies ?? []).filter(id => byId('enemies', id) && !byId('enemies', id).guardian);
+  const known = (ctx.pit.knownEnemies ?? []).filter(id => byId('enemies', id) && !byId('enemies', id).guardian && !byId('enemies', id).subjective);
   ctx.expedition.returnCheck = result;
   if (result.success || !known.length) {
     ctx.expedition.lastResult = { text: result.success ? 'The Return route is safe.' : 'No known eligible enemy intercepts the Return.', check: result };
@@ -126,51 +137,74 @@ export function handleDefeat(ctx, rng, cause) {
     ctx.pit.pendingFinalHeart = { actor: ctx.actor.id, expedition: ctx.expedition.id, cause,
       returning, day: ctx.day, floor: ctx.expedition.floor.number };
     ctx.expedition.lastResult = { ...outcome, text: `${outcome.text} Your last Heart is at risk. The expedition has ended; the outcome is pending.` };
-    completeReturn(ctx, 'final-heart-pending');
+    completeReturn(ctx, 'final-heart-pending', { preservePoison: true });
     return;
   }
   r.hearts--;
   recordHeartLoss(ctx.actor,{cause,day:ctx.day,year:ctx.year??1,floor:ctx.expedition.floor.number,
     expedition:ctx.expedition.id},r.hearts+1,r.hearts);
-  r.hp = Math.ceil(derivedActorValues(ctx.actor).maxHp / 2);
-  if (returning) {
-    ctx.expedition.lastResult = { ...outcome, text: `${outcome.text} Defeated during Return: lost 1 Heart; restored to ${r.hp} HP and reached the entrance.` };
-    completeReturn(ctx, 'return-defeat');
-  } else {
-    regenerateFloor(ctx, rng);
-    ctx.expedition.lastResult = { ...outcome, text: `${outcome.text} Defeated by ${cause}: lost 1 Heart; restored to ${r.hp} HP at the regenerated Floor start. Spent resources remain spent.` };
+  const firstHeartLoss = (ctx.actor.data.heartLossSequence ?? 0) === 1;
+  const unlockTraining = firstHeartLoss && ctx.services && !ctx.services.auronTrainingUnlocked;
+  if (unlockTraining) {
+    ctx.services.auronTrainingPending = true;
+    ctx.services.auronTrainingUnlocked = true;
   }
+  ctx.expedition.lastResult = { ...outcome, text: `${outcome.text} Defeated by ${cause}: lost 1 Heart; returned safely to Pit Entrance with full HP.` };
+  if (unlockTraining) {
+    ctx.expedition.lastResult.trainingUnlocked = true;
+    ctx.expedition.lastResult.text += ' Training with Auron unlocked. Auron, the Guardian Adventurer, can help you prepare after this first loss. Choose Leave, then Guild, and find Training with Auron. Each session costs 1 AP + 2 XP.';
+  }
+  completeReturn(ctx, returning ? 'return-defeat' : 'defeat', { fullHp: true, preservePoison: false });
 }
 
 // One post-resolution boundary for lethal damage, Poison and victory. UI cannot
 // call reward/defeat phases independently or repeat a completed challenge.
 export function finishExpeditionAction(ctx, rng) {
   if (!ctx.pit.expedition) return;
+  // Resolve only forced transitions. A legacy round-result already paid its
+  // round-end effects; cancelled/incoming have not. Flags are consumed below.
+  const combat = ctx.expedition.combat;
+  if (!ctx.victory && resources(ctx.actor).hp > 0 && combat) {
+    if (combat.phase === 'cancelled') nextCombatPhase(ctx, rng);
+    else if (combatPhase(combat) === 'incoming' && !combat.committed.offensive) {
+      const previous = ctx.expedition.lastResult;
+      defend(ctx, 'none', undefined, rng);
+      ctx.expedition.lastResult = { ...previous, text: `${previous.text} ${ctx.expedition.lastResult.text}` };
+    }
+  }
   if(resources(ctx.actor).sanity<=0){
     ctx.pit.pendingDeath={actor:ctx.actor.id,cause:'sanity',day:ctx.day,expedition:ctx.expedition.id,
       floor:ctx.expedition.floor.number,hp:resources(ctx.actor).hp,hearts:resources(ctx.actor).hearts};
     ctx.expedition.lastResult.text+=' Sanity reached zero. The death outcome is pending.';
-    completeReturn(ctx,'sanity-death-pending');return;
+    completeReturn(ctx,'sanity-death-pending',{ preservePoison: true });return;
   }
   if (ctx.victory) {
     const evidence = ctx.pit.houndEvidence?.[ctx.expedition.combat.enemy.id];
     if (evidence) evidence.status = 'defeated';
     const combat = ctx.expedition.combat, previous = ctx.expedition.lastResult;
+    const subjective = byId('enemies', combat.enemy.templateId).subjective;
     const rewards = awardEnemy(ctx, combat.enemy.templateId, rng);
+    // Subjective enemies have no creature loot/knowledge, but their resolved
+    // Combat room still earns the shared room supply (not a per-enemy drop).
     if (combat.kind === 'room' && !currentRoom(ctx.expedition).resolved) rewards.push(...awardRoom(ctx, currentRoom(ctx.expedition), rng));
     if(combat.enemy.templateId==='enemy_ruin_brute') {
       playerGuardianVictory(ctx);
     }
     ctx.expedition.combat = null;
-    ctx.expedition.lastResult = { ...previous, text: `Victory. ${previous.text}`, rewards };
+    ctx.expedition.lastResult = { ...previous, text: subjective ? `The Hollow Double comes apart without falling. For a moment, the Pit is quiet again. ${changeSanity(ctx.actor, 1, 'Hollow Double defeated — Sanity restored')} ${previous.text}` : `Victory. ${previous.text}`, rewards };
     if (combat.kind === 'return') ctx.expedition.returnPending = true;
     // Enemy HP zero ends combat immediately, before an end-round Poison tick.
   } else {
     if (resources(ctx.actor).hp > 0 && (ctx.roundCompleted || ctx.noncombatCompleted) && tickPoison(ctx.actor)) {
       ctx.expedition.lastResult.poisonDamage = 1;
-      ctx.expedition.lastResult.text += ' Poison: 1 HP lost.';
+      ctx.expedition.lastResult.text += ' POISONED — 1 HP lost.';
     }
     if (resources(ctx.actor).hp <= 0) handleDefeat(ctx, rng, ctx.expedition.lastResult.poisonDamage ? 'Poison' : ctx.expedition.combat ? 'combat' : 'hazard');
+  }
+  ctx.roundCompleted = false;
+  ctx.noncombatCompleted = false;
+  if (ctx.pit.expedition && ctx.expedition.combat?.phase === 'round-result') {
+    nextCombatPhase(ctx, rng);
   }
   if (ctx.pit.expedition && ctx.expedition.returnPending && !ctx.expedition.pendingLoot.length) completeReturn(ctx, 'return-victory');
 }

@@ -1,5 +1,8 @@
 # Milestone 2 six-pillar proof
 
+> Historical revision record. Rules, completion status, and test counts describe this revision; see [documentation guide](README.md) for later corrections and current verification.
+
+
 Current file paths below reflect the subsequent [repository reorganization](repository-reorganization.md). That move preserved this milestone's rules, fixture data, tests, and save behavior.
 
 Milestone 2 is complete using LWE Core v0.1.0 without Core changes. The proof uses replaceable test data, with no production Content design or Legacy migration. All 26 HearthVale tests and 56 Core regression tests pass; both diagnostic CLIs pass. The foundation is ready for Milestone 3's minimal Pit proof within its agreed scope. Succession remains blocked by the separate controller-transfer gap.

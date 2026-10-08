@@ -1,5 +1,8 @@
 # Milestone 4 — Succession and world continuity proof
 
+> Historical revision record. Rules, completion status, and test counts describe this revision; see [documentation guide](README.md) for later corrections and current verification.
+
+
 Milestone 4 is complete as a Shell architecture proof. It consumes the accepted generic Core controller-transfer operation without further Core changes. All values and opportunities are replaceable fixtures, not production succession design.
 
 ## 1. Files created and changed

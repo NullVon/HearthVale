@@ -11,7 +11,7 @@ test('M6C3 item and spell descriptions convey actual effects without raw schema 
   assert.match(comparison(byId('items','item_antidote')),/Cure Poison/);
   assert.match(comparison(byId('items','item_bigshroom_tonic')),/\+8 Max HP for this expedition/);
   assert.match(equipmentEffectText(byId('spells','spell_heal').effects),/Restore up to 8 HP/);
-  assert.match(equipmentEffectText(byId('spells','spell_barrier').effects),/Barrier 3 for this round/);
+  assert.match(equipmentEffectText(byId('spells','spell_barrier').effects),/Barrier 3 until the next enemy offensive action resolves; no Stability bonus/);
   assert.match(equipmentEffectText(byId('spells','spell_teleport').effects),/without a Return encounter/);
   for(const d of [...expeditionCatalog.spells,...expeditionCatalog.items.filter(i=>i.effects.length)]){
     const text=equipmentEffectText(d.effects);assert.ok(text,d.id);assert.doesNotMatch(text,/effect_|expedition_hp|cure 1|return 1|unlock 1/);

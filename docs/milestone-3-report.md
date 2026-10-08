@@ -1,5 +1,8 @@
 # Milestone 3 — Minimal Pit vertical slice
 
+> Historical revision record. Rules, completion status, and test counts describe this revision; see [documentation guide](README.md) for later corrections and current verification.
+
+
 Milestone 3 is complete against LWE Core v0.1.0. This is a lifecycle proof using replaceable fixtures. No production Content, Story, UI, succession, or Core implementation was added.
 
 ## 1. Files created and changed

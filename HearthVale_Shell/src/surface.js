@@ -23,6 +23,10 @@ export function createSurfaceShell(openingIntent) {
     perceive: informationPerceptions,
     consequences: weeklyConsequences,
     worldProcesses: ({ world }, { rng }) => {
+      // Presentation acknowledgement: no Actor action, AP cost or random draw.
+      if(openingIntent?.type==='magic-introduction-seen')return [{type:'hearthvale.magic-introduction-seen',effects:[
+        {type:'global',key:'hearthvaleSurface',value:{...surfaceState(world),magicIntroductionSeen:true}},
+      ]}];
       if(demoComplete(world))return [];
       if(openingIntent?.type==='completion-finalize')return completionEvent(world,openingIntent.reason);
       if(openingIntent?.type==='completion-death-boundary')return [{type:'hearthvale.final-day-boundary',effects:
@@ -104,7 +108,23 @@ export function createSurfaceGame({ seed = 1, saved } = {}) {
       return deathEvents(world).length || s.calendar.day===40&&world.entities[s.playerId]?.data.death
         ? resolve(undefined) : null;
     },
+    // Explicit compatibility resume keeps API deserialization byte-exact. The
+    // player UI invokes it before rendering a loaded game, through Core actions.
+    resumeFlow: () => {
+      let world = runtime.snapshot().world;
+      if (!demoComplete(world) && deathEvents(world).length) resolve(undefined);
+      for (let i = 0; i < 4; i++) {
+        world = runtime.snapshot().world;
+        const choice = expeditionChoices(world).find(c => c.type === 'pit.combat-next'
+          || c.type === 'pit.defend' && c.params.mode === 'none');
+        if (!choice) return;
+        resolve(undefined, { actor: surfaceState(world).playerId, type: choice.type, params: choice.params, targets: [] });
+      }
+      throw new Error('Unable to resume combat flow');
+    },
     openingNext: () => resolve({ type: 'opening-next' }),
+    acknowledgeMagicIntroduction: () => surfaceState(runtime.snapshot().world).magicIntroductionSeen
+      ? null : resolve({type:'magic-introduction-seen'}),
     choose: id => resolve({ type: 'choose', id }),
     beginSuccession: () => resolve({type:'succession-begin'}),
     chooseSuccessor: id => resolve({type:'succession-choose',id}),

@@ -1,3 +1,4 @@
+import { changeSanity } from './sanity.js';
 import { byId } from '../../HearthVale_Content/expedition.js';
 import { noncombatCheck } from './expedition-checks.js';
 import { resources } from './expedition-equipment.js';
@@ -11,13 +12,13 @@ export function resolveEvent(ctx,room,choiceId,rng) {
   const template=byId('events',room.encounter), choice=template.choices.find(c=>c.id===choiceId);
   if(!choice) throw new Error('Unknown Event choice');
   const check=choice.check?noncombatCheck(ctx,choice.check,rng):null;
-  const rewards=[];
+  const rewards=[]; let sanityText='';
   // Hidden reliability is authored state, never a player-facing diagnosis.
   if(template.id==='event_scratched_warning') room.warningAccuracy ??= ['Accurate','Stale','Incomplete','Incorrect'][Math.floor(rng.next()*4)];
-  ctx.pit.eventHistory ??= [];
   const history={event:template.id,choice:choice.id,actor:ctx.actor.id,day:ctx.day};
   for(const effect of check && !check.success ? choice.failure : choice.effects){
     const handlers={
+      effect_sanity:()=>{sanityText=changeSanity(ctx.actor,effect.value,template.label);},
       effect_treasure:()=>{const reward=treasureReward(ctx,rng);if(reward) rewards.push(reward);},
       effect_item:()=>rewards.push(offerLoot(ctx,effect.target,effect.value)),
       effect_arrows:()=>{resources(ctx.actor).arrows+=effect.value;rewards.push({resource:'arrows',quantity:effect.value});},
@@ -35,6 +36,7 @@ export function resolveEvent(ctx,room,choiceId,rng) {
     if(!handlers[effect.tag]) throw new Error(`Unsupported Event effect ${effect.tag}`);
     handlers[effect.tag]();
   }
-  ctx.pit.eventHistory.push(history);
-  return {text:`${template.label}: ${choice.label}.${check?check.success?' Success.':' Failure.':''}`,check,rewards};
+  if (!template.subjective) (ctx.pit.eventHistory ??= []).push(history);
+  else (ctx.actor.data.memories ??= []).push({kind:'personal-experience',day:ctx.day,year:ctx.year??1,event:'Experienced a hallucination in the Pit.'});
+  return {text:`${template.label}: ${choice.label}.${check?check.success?template.subjective?' Recognized and endured the hallucination.':' Success.':' Failure.':''}${sanityText ? ` ${sanityText}` : ''}`,check,rewards};
 }

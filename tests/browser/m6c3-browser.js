@@ -25,7 +25,7 @@ function disclose(){doc().querySelectorAll('details').forEach(d=>d.open=true);}
 function roundTrip(label){const terminal=!doc().querySelector('.hud');if(!terminal)click('menu');click('save');const saved=localStorage.getItem(manual);click('load');if(!terminal)click('menu');click('save');check(saved===localStorage.getItem(manual),`${label}: changed save`);if(!terminal)click('close');reports.push(`${label}: PASS exact save/load`);}
 async function run(){const backup=[manual,auto].map(k=>localStorage.getItem(k));reports.length=0;errors.length=0;output.textContent='Running…';
 try{for(const width of [320,1100]){frame.style.width=`${width}px`;
-  await page();click('new');await scales(`${width} historical opening`);for(let i=0;i<5;i++)click('opening-next');await scales(`${width} initial candidates`);click('choose');click('arrive');await scales(`${width} Mira opening`);click('answer');click('finish-mira');await scales(`${width} Inn`);
+  await page();click('new');await scales(`${width} historical opening`);for(let i=0;i<5;i++)click('opening-next');await scales(`${width} initial candidates`);click('choose');check(!doc().querySelector('[data-command="arrive"]')&&doc().querySelector('[data-command="answer"]'),'Normal arrival did not automatically reach Mira');await scales(`${width} Mira opening`);click('answer');click('finish-mira');await scales(`${width} Inn`);
   await load('Surface');await scales(`${width} Surface`);
   for(const location of ['loc_shop','loc_guild','loc_town_hall','loc_pit_entrance']){click('move',location);disclose();await scales(`${width} ${location}`);click('move','loc_surface');}
   click('character');for(const t of ['stats','traits','history']){click('character-tab',t);await scales(`${width} Character ${t}`);}click('close');
@@ -33,7 +33,7 @@ try{for(const width of [320,1100]){frame.style.width=`${width}px`;
   click('menu');click('settings');check(doc().querySelector('[data-command="text-size"]').getAttribute('aria-pressed')==='false','Settings initial state');click('text-size');check(doc().querySelector('[data-command="text-size"]').getAttribute('aria-pressed')==='true','Settings selected state');check(doc().activeElement.dataset.command==='text-size','Settings focus retained');click('text-size');click('menu');click('help');await scales(`${width} Help`);click('menu');click('close');roundTrip(`${width} Surface`);
   for(const name of ['hazard','Combat spells','Return encounter','Known shortcut','Rook resolved','Rich Life Record','Successor candidates','Successor resumed','Brute ending','Day 40 ending','Day 40 death ending']){
     await load(name);disclose();
-    if(name==='Combat spells'){click('pit-tab','spells');check(doc().body.textContent.includes('Barrier 3 for this round'),'Spell text');}
+    if(name==='Combat spells'){check(doc().querySelector('[data-command="pit-tab"][data-value="spells"]'),'Normal Mode missing learned spells');click('menu');click('settings');click('dev-mode');click('menu');click('close');click('pit-tab','spells');check(doc().body.textContent.includes('Barrier 3 until the next enemy offensive action resolves; no Stability bonus')&&!doc().body.textContent.includes('Barrier 3 for this round'),'Spell text');}
     if(name==='Rook resolved')check(doc().body.textContent.includes('Completed by Rook'),'Actual resolver');
     await scales(`${width} ${name}`);
     if(['Combat spells','Successor candidates','Day 40 death ending'].includes(name))roundTrip(`${width} ${name}`);

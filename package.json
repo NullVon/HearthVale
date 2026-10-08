@@ -1,6 +1,6 @@
 {
   "name": "hearthvale-shell",
-  "version": "1.0.0-vertical-slice",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "exports": "./HearthVale_Shell/src/index.js",

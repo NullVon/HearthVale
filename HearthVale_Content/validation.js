@@ -121,7 +121,7 @@ function semantics(catalog, ctx) {
       for(const stock of list(v.stock))if(stock.floor>stock.target)error(path,'protected floor exceeds stock target');
     }
     if(group==='events')for(const choice of list(v.choices))if(!choice.resolver){
-      const allowed=['effect_treasure','effect_item','effect_arrows','effect_gold','effect_combat','effect_rumor','effect_observation','effect_social'];
+      const allowed=['effect_sanity','effect_treasure','effect_item','effect_arrows','effect_gold','effect_combat','effect_rumor','effect_observation','effect_social'];
       for(const effect of [...list(choice.effects),...list(choice.failure)]) {
         if(!allowed.includes(effect.tag))error(path,'unsupported declarative Event consequence');
         if(effect.tag==='effect_item'&&index.get(effect.target)?.group!=='items')error(path,'item consequence requires an item');
@@ -145,29 +145,36 @@ function semantics(catalog, ctx) {
     if (group === 'items') {
       const requireFields = fields => fields.forEach(f => { if (v[f] === undefined) error(`${path}.${f}`, `required for ${v.category}`); });
       if (v.price === undefined && v.sellValue === undefined && !['scroll', 'tome'].includes(v.category)) error(path, 'requires price or direct sell value');
-      if (v.category === 'weapon') requireFields(['tier', 'damage', 'defense', 'maxDurability', 'impact', 'range', 'accuracy', 'canDefend', 'wear']);
+      if (v.category === 'weapon') {
+        requireFields(['tier', 'damage', 'defense', 'impact', 'accuracy', 'canDefend', 'speed', 'qualityStat']);
+        if (v.ammo) {
+          if (v.maxDurability !== undefined || v.wear !== undefined) error(path, 'ammunition weapons do not use DUR in the VS');
+        } else requireFields(['maxDurability', 'wear']);
+      }
       if (v.category === 'shield') requireFields(['defense', 'maxDurability', 'canDefend', 'wear']);
       if (v.category === 'armor') requireFields(['defense', 'armorSlot']);
       if (['scroll', 'tome'].includes(v.category)) requireFields(['spell']);
       if (['consumable', 'scroll'].includes(v.category)) requireFields(['freeAction', 'wastefulEligible']);
       if (v.category === 'consumable' && !list(v.effects).length) error(path, 'consumable requires effect');
       if (v.ammo && get(v.ammo)?.category !== 'ammo') error(path, 'ammo reference must target ammunition');
-      if (v.id === 'item_bow' && (v.canDefend !== false || v.wear !== 'every-shot' || !v.ammo || v.range !== 'FAR')) error(path, 'Bow requires FAR, ammunition, every-shot wear and cannot defend');
+      if (v.id === 'item_bow' && (v.canDefend !== false || !v.ammo || v.maxDurability !== undefined || v.wear !== undefined)) error(path, 'Bow requires ammunition, no DUR, and cannot defend');
     }
     if (group === 'spells') {
       if (!list(v.effects).length) error(path, 'spell requires effect');
       if (v.explorationOnly && v.startingEligible) error(path, 'exploration spells cannot be starting spells');
     }
+    if (group === 'moves' && v.speed !== undefined) {
+      const offensive = v.damage > 0 || v.impact > 0 || list(v.onHit).length > 0;
+      if (offensive && !['STR', 'DEX'].includes(v.qualityStat)) error(path, 'offensive move requires STR or DEX quality stat');
+      if (!offensive && (v.speed !== 0 || v.qualityStat !== undefined)) error(path, 'nonoffensive move requires Speed 0 and no quality stat');
+    }
     if (group === 'enemies') {
-      for (const range of ['near', 'far']) {
-        weighted(v[range], `${path}.${range}`, 'moves');
-        for (const entry of list(v[range]?.entries)) {
-          const move = get(entry?.target);
-          if (move && move.range !== range.toUpperCase()) error(`${path}.${range}`, 'move has incompatible range');
-        }
+      weighted(v.moves, `${path}.moves`, 'moves');
+      for (const entry of list(v.moves?.entries)) {
+        const move = get(entry?.target);
+        if (move?.speed === undefined) error(path, 'combat moves require authored Speed');
+        if (move && !(move.damage > 0 || move.impact > 0 || list(move.onHit).length)) error(path, 'unified combat pool requires offensive moves');
       }
-      if (!list(v.far?.entries).some(e => e?.weight > 0 && (get(e.target)?.damage > 0 || get(e.target)?.movement === 'NEAR')))
-        error(`${path}.far`, 'FAR behavior must attack or close distance');
       for (const harvest of list(v.harvest)) if (get(harvest?.item)?.category !== 'material') error(`${path}.harvest`, 'harvest must target material');
     }
     if (group === 'actors') { traits(v.traits, `${path}.traits`); loadout(v.loadout, `${path}.loadout`); }
@@ -207,7 +214,10 @@ export function validateCandidate(candidate, catalog, options = {}) {
     const loadout = candidate.loadout;
     if (plain(loadout)) {
       const weapons = Array.isArray(loadout.weapons) ? loadout.weapons : [];
-      if (weapons.length !== 2 || new Set(weapons).size !== 2) ctx.error('candidate.loadout.weapons', 'requires exactly 2 different Tier-1 weapons');
+      const ordinaryStarter = weapons.length === 2 && new Set(weapons).size === 2;
+      const magicStarter = weapons.length === 1 && weapons[0] === 'item_bow'
+        && Array.isArray(loadout.spells) && loadout.spells.length === 1 && loadout.spells[0] === 'spell_fireball';
+      if (!ordinaryStarter && !magicStarter) ctx.error('candidate.loadout.weapons', 'requires exactly 2 different Tier-1 weapons, or Bow-only with learned Fireball');
       if (weapons.some(id => !['item_sword', 'item_hammer', 'item_bow'].includes(id) || ctx.index.get(id)?.value.tier !== 1))
         ctx.error('candidate.loadout.weapons', 'starting weapons must be Tier-1 Sword, Hammer or Bow');
       if (loadout.arrows !== (weapons.includes('item_bow') ? 10 : 0)) ctx.error('candidate.loadout.arrows', 'Bow requires 10 Arrows; no Bow requires 0');

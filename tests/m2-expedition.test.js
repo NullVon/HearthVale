@@ -37,12 +37,12 @@ test('M2 A07 entering on the last AP still permits exploration/Return; zero AP c
   assert.throws(() => game.perform('pit.enter'), /unavailable/);
 });
 
-test('M2 A08 200 seeded nine-Floor routes satisfy counts, family runs, no repeats and stable generation', () => {
+test('M2 A08 200 seeded nine-Floor routes satisfy counts, no repeats and stable generation', () => {
   const generate = seed => {
     const runtime = createRuntime({ seed, shell: { worldProcesses: (_, { rng }) => {
-      const floors = [], families = []; let tail = [];
+      const floors = [], families = []; let tail = []; const pitState = {};
       for (let floor = 1; floor <= 9; floor++) {
-        const result = generateFloor(floor, 1, tail, rng); floors.push(result); tail = floorTail(result);
+        const result = generateFloor(floor, 1, tail, rng, null, pitState); floors.push(result); tail = floorTail(result);
         families.push(...result.rooms.map(r => r.family));
       }
       return [{ type: 'fixture.floors-generated', effects: [{ type: 'global', key: 'floors', value: floors }, { type: 'global', key: 'families', value: families }] }];
@@ -57,31 +57,35 @@ test('M2 A08 200 seeded nine-Floor routes satisfy counts, family runs, no repeat
       assert.ok(floor.rooms.some(r => r.family !== 'combat'));
       assert.equal(new Set(floor.rooms.map(r => r.encounter)).size, floor.rooms.length);
     }
-    const all = a.snapshot().world.globals.families;
-    for (let i = 2; i < all.length; i++) assert.ok(!(all[i] === all[i-1] && all[i] === all[i-2]));
   }
   let calls = 0; const fixed = generateFloor(10, 1, [], { next: () => { calls++; return 0; } });
   assert.equal(calls, 0); assert.equal(fixed.rooms[0].family, 'fixed');
   assert.throws(() => generateFloor(11, 1, [], dice(0)), /Stratum 1/);
 });
 
-test('M2 A09 baseline boundaries, resource quantities and treasure categories are exclusive', () => {
-  assert.deepEqual(baselineReward(dice(.599)), { resource: 'essence', quantity: 1 });
-  assert.deepEqual(baselineReward(dice(.6, 0)), { resource: 'arrows', quantity: 1 });
-  assert.deepEqual(baselineReward(dice(.899, .9)), { resource: 'arrows', quantity: 2 });
-  assert.equal(baselineReward(dice(.9)), null);
+test('M2 A09 guaranteed Essence, combat arrow chance, resource quantities and treasure categories are exclusive', () => {
+  assert.deepEqual(baselineReward(dice(.999)), { resource: 'essence', quantity: 1 });
   for (const [roll, material] of [[0,'moonleaf'],[.4,'bitterroot'],[.7,'bigshroom'],[.9,'iron_ore']]) {
     const ctx = context(); const room = { family: 'resource', resolved: false };
-    awardRoom(ctx, room, dice(.95, roll, .75));
+    const rewards = awardRoom(ctx, room, dice(roll, .75));
+    assert.equal(ctx.actor.data.attributes.resources.essence, 2);
+    assert.equal(rewards.filter(r => r.resource === 'essence').reduce((sum, r) => sum + r.quantity, 0), 2);
     assert.equal(ctx.actor.data.holdings.materials[`item_${material}`], 2);
     assert.throws(() => awardRoom(ctx, room, dice(0)), /already resolved/);
   }
-  for (const [roll, category] of [[0,'consumable'],[.25,'valuable'],[.5,'scroll'],[.65,'tome'],[.8,null]]) {
+  for (const [roll, arrowRoll, expected] of [[.499,0,1],[.499,.9,2],[.5,0,0]]) {
+    const ctx = context(); const before = ctx.actor.data.attributes.resources.arrows;
+    const rewards = awardRoom(ctx, { family: 'combat', resolved: false }, dice(roll, arrowRoll));
+    assert.equal(ctx.actor.data.attributes.resources.essence, 1);
+    assert.equal(ctx.actor.data.attributes.resources.arrows, before + expected);
+    assert.equal(rewards.filter(r => r.resource === 'arrows').reduce((sum, r) => sum + r.quantity, 0), expected);
+  }
+  for (const [roll, category] of [[.05,'consumable'],[.3,'valuable'],[.65,'weapon'],[.82,'scroll'],[.95,'tome'],[.999,'tome']]) {
     const ctx = context(), reward = treasureReward(ctx, dice(roll, 0));
     assert.equal(reward ? byId('items', reward.item).category : null, category);
   }
   const spells = new Set();
-  for (let i = 0; i < 6; i++) spells.add(byId('items', treasureReward(context(), dice(.5, (i+.1)/6)).item).spell);
+  for (let i = 0; i < 6; i++) spells.add(byId('items', treasureReward(context(), dice(.82, (i+.1)/6)).item).spell);
   assert.equal(spells.size, 6);
   const ctx = context(); assert.deepEqual(awardRoom(ctx, { family: 'empty', resolved: false }, { next: () => { throw new Error('Empty reward roll'); } }), []);
 });
@@ -213,23 +217,23 @@ test('M2 A14 ordinary Retreat regenerates current Floor start, preserves resourc
   assert.equal(expedition(game).returnCheck, undefined);
 });
 
-test('M2 A15 lethal combat/hazard/Poison loses one Heart, restores half HP, regenerates route and preserves spending', () => {
+test('M2 A15 lethal combat/hazard/Poison loses one Heart, ends expedition at full HP, clears Poison and preserves tangible spending', () => {
   for (const cause of ['combat', 'hazard', 'Poison']) {
     const ctx = context(); if (cause !== 'combat') roomFixture(ctx, 'hazard', 'hazard_collapsed_floor');
     ctx.actor.data.attributes.resources.hp = 0; ctx.actor.data.attributes.resources.essence = 7;
     ctx.actor.data.attributes.resources.arrows = 1; ctx.expedition.strain = 5;
     ctx.actor.data.statuses = { poison: true }; ctx.actor.data.inventory.equipped[1].durability = 1;
     handleDefeat(ctx, dice(.2), cause);
-    assert.equal(ctx.actor.data.attributes.resources.hearts, 2); assert.equal(ctx.actor.data.attributes.resources.hp, 8);
-    assert.equal(ctx.expedition.roomIndex, -1); assert.equal(ctx.expedition.combat, null);
-    assert.equal(ctx.actor.data.attributes.resources.essence, 7); assert.equal(ctx.expedition.strain, 5);
+    assert.equal(ctx.actor.data.attributes.resources.hearts, 2); assert.equal(ctx.actor.data.attributes.resources.hp, 16);
+    assert.equal(ctx.pit.expedition, null); assert.equal(ctx.actor.primaryLocation, 'loc_pit_entrance');
+    assert.equal(ctx.actor.data.attributes.resources.essence, 0);
     assert.equal(ctx.actor.data.attributes.resources.arrows, 1); assert.equal(ctx.actor.data.inventory.equipped[1].durability, 1);
-    assert.equal(ctx.actor.data.statuses.poison, true);
+    assert.equal(ctx.actor.data.statuses.poison, undefined);
   }
   const game = setup(entered(), ctx => {
     roomFixture(ctx, 'empty', 'fixture_poison_death'); ctx.actor.data.attributes.resources.hp = 1; ctx.actor.data.statuses = { poison: true };
   });
-  use(game, 'pit.resolve-room'); assert.equal(player(game).data.attributes.resources.hearts, 2); assert.equal(expedition(game).roomIndex, -1);
+  use(game, 'pit.resolve-room'); assert.equal(player(game).data.attributes.resources.hearts, 2); assert.equal(expedition(game), null);
 });
 
 test('M2 A16 Return uses deepest-Floor WIS DC once; empty Known Enemy List arrives safely even after failure', () => {
@@ -254,7 +258,7 @@ test('M2 A16 failed Return creates exactly one known-enemy encounter with Retrea
   const saved = game.save(); assert.equal(createSurfaceGame({ saved }).save(), saved);
 });
 
-test('M2 A16 Return victory/defeat and Teleport clear Essence/Strain/Poison, preserve tangible loot, and keep the Day', () => {
+test('M2 A16 Return endings clear Essence/Strain, clear Poison only on defeat, preserve tangible loot, and keep the Day', () => {
   for (const ending of ['victory','defeat','teleport']) {
     const ctx = context(); ctx.expedition.combat.kind = 'return';
     ctx.actor.data.statuses = { poison: true, unrelated: true }; ctx.expedition.strain = 5;
@@ -263,7 +267,7 @@ test('M2 A16 Return victory/defeat and Teleport clear Essence/Strain/Poison, pre
     else if (ending === 'defeat') { ctx.actor.data.attributes.resources.hp = 0; finishExpeditionAction(ctx, dice(0)); }
     else { ctx.expedition.combat = null; explorationSpell(ctx, 'spell_teleport', dice(0)); }
     assert.equal(ctx.pit.expedition, null); assert.equal(ctx.actor.primaryLocation, 'loc_pit_entrance');
-    assert.equal(ctx.actor.data.attributes.resources.essence, 0); assert.equal(ctx.actor.data.statuses.poison, undefined);
+    assert.equal(ctx.actor.data.attributes.resources.essence, 0); assert.equal(ctx.actor.data.statuses.poison, ending === 'defeat' ? undefined : true);
     assert.equal(ctx.actor.data.statuses.unrelated, true); assert.equal(ctx.actor.data.holdings.materials.item_moonleaf, 2);
     assert.equal(ctx.pit.lastExpedition.day, 1);
     assert.equal(ctx.actor.data.attributes.resources.hearts, ending === 'defeat' ? 2 : 3);
@@ -280,6 +284,7 @@ test('M2 final-Heart hook ends expedition and M5 adjudicates the available Auron
   assert.equal(player(game).data.attributes.resources.hearts, 1);
   assert.ok(player(game).data.attributes.resources.hp > 0);
   assert.equal(player(game).data.deathAdjudication.status,'rescued');
+  assert.equal(player(game).data.statuses.poison,true); // Rescue must not grant a free cure.
   assert.ok(game.expeditionChoices().some(c=>c.type==='pit.enter'));
   assert.equal(createSurfaceGame({ saved: game.save() }).save(), game.save());
 });

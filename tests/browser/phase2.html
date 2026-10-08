@@ -1,0 +1,6 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Phase 2.1 combat browser checks</title>
+<h1>Phase 2.1 combat</h1><p>Exercises production controls and restores prior browser saves.</p>
+<button id="run" disabled>Run Phase 2.1 checks</button><pre id="results">Loading test modules…</pre>
+<iframe id="game" title="Production HearthVale" src="../../HearthVale_UI/index.html" style="width:390px;height:844px"></iframe>
+<script>addEventListener('error',event=>{document.querySelector('#results').textContent=`LOAD ERROR: ${event.message}`;});</script>
+<script type="module" src="./phase2-browser.js"></script></html>

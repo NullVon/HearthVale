@@ -31,11 +31,13 @@ export function validCatalog() {
     ...(name === 'lucky_bastard' ? { perDrawChance: 1 } : {}),
   }));
   c.items = [
-    ...[['sword', 30, 3, 1, 12, 1, 'STR', 'NEAR'], ['hammer', 40, 4, 0, 10, 2, 'STR', 'NEAR'], ['bow', 35, 3, 0, 12, 0, 'DEX', 'FAR']]
+    ...[['sword', 30, 3, 1, 12, 1, 'STR', 'NEAR'], ['hammer', 40, 4, 0, 10, 2, 'STR', 'NEAR'], ['bow', 35, 3, 0, null, 0, 'DEX', 'FAR']]
       .map(([name, price, damage, defense, maxDurability, impact, accuracy, range]) => ({
-        id: `item_${name}`, label: name, category: 'weapon', price, damage, defense, maxDurability, impact, accuracy, range,
-        tier: 1, stackable: false, canDefend: name !== 'bow', wear: name === 'bow' ? 'every-shot' : 'successful-hit',
-        ...(name === 'bow' ? { ammo: 'item_arrows' } : {}), effects: [], contexts: ['combat'],
+        id: `item_${name}`, label: name, category: 'weapon', price, damage, defense, impact, accuracy, range,
+        ...(maxDurability ? { maxDurability } : {}),
+        speed: {sword:0,hammer:-1,bow:1}[name], qualityStat: accuracy,
+        tier: 1, stackable: false, canDefend: name !== 'bow',
+        ...(name === 'bow' ? { ammo: 'item_arrows' } : { wear: 'successful-hit' }), effects: [], contexts: ['combat'],
       })),
     { id: 'item_chest_armor', label: 'Chest Armor', category: 'armor', price: 75, stackable: false, defense: 2, armorSlot: 'chest', effects: [], contexts: ['combat'] },
     { id: 'item_shield', label: 'Shield', category: 'shield', price: 50, stackable: false, defense: 3, maxDurability: 15, canDefend: true, wear: 'connected-defense', effects: [], contexts: ['combat'] },
@@ -53,13 +55,14 @@ export function validCatalog() {
     ranges: target === 'enemy' ? ['NEAR', 'FAR'] : [], ...(target === 'enemy' ? { accuracy: 'INT' } : {}),
     effects: [{ tag: `effect_${tag}`, value }], explorationOnly: i > 3, startingEligible: i < 4 }));
   c.moves = [
-    { id: 'move_slime_bash', label: 'Slime Bash', range: 'NEAR', damage: 2, impact: 1, dodgeDC: 8, stability: 1, movement: 'none', onHit: [] },
-    { id: 'move_body_slam', label: 'Body Slam', range: 'NEAR', damage: 3, impact: 1, dodgeDC: 8, stability: 1, movement: 'none', onHit: [] },
-    { id: 'move_close', label: 'Move to NEAR', range: 'FAR', damage: 0, impact: 0, dodgeDC: 8, stability: 0, movement: 'NEAR', onHit: [] },
+    { id: 'move_slime_bash', label: 'Slime Bash', speed: 0, qualityStat: 'STR', range: 'NEAR', damage: 2, impact: 1, dodgeDC: 8, stability: 1, movement: 'none', onHit: [] },
+    { id: 'move_body_slam', label: 'Body Slam', speed: -1, qualityStat: 'STR', range: 'NEAR', damage: 3, impact: 1, dodgeDC: 8, stability: 1, movement: 'none', onHit: [] },
+    { id: 'move_close', label: 'Move to NEAR', speed: 0, range: 'FAR', damage: 0, impact: 0, dodgeDC: 8, stability: 0, movement: 'NEAR', onHit: [] },
   ];
   c.enemies = [{ id: 'enemy_slime', label: 'Slime', hp: 6, defense: 0, attackDC: 8, xp: 2, guardian: false,
+    combatStats: { STR: 2, DEX: 1 },
     harvest: [{ item: 'item_slime_core', chance: 55, quantity: 1 }],
-    near: { kind: 'exclusive', entries: [{ target: 'move_slime_bash', weight: 70 }, { target: 'move_body_slam', weight: 30 }] },
+    moves: { kind: 'exclusive', entries: [{ target: 'move_slime_bash', weight: 70 }, { target: 'move_body_slam', weight: 30 }] },
     far: { kind: 'exclusive', entries: [{ target: 'move_close', weight: 100 }] } }];
   c.hazards = [{ id: 'hazard_collapsed_floor', label: 'Collapsed Floor', primary: { stat: 'DEX', dc: 11 },
     advantageFrom: [], failure: [{ tag: 'effect_damage', value: 3 }], text: 'text_family' }];

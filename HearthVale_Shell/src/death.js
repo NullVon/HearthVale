@@ -56,12 +56,12 @@ export function deathEvents(world) {
     const auron=structuredClone(rescuer),before=resources(auron).hearts;
     resources(auron).hearts--;
     const count=(auron.data.rescueCount??0)+1;auron.data.rescueCount=count;
-    const memoryStart=auron.data.memories?.length??0;
+    const memoryStart=auron.data.memories?.length??0,services=economyState(world),trainingWasUnlocked=services.auronTrainingUnlocked===true;
     recordHeartLoss(auron,{...context,cause:'rescue'},before,before-1);
     ar.hearts=1;ar.hp=Math.ceil(derivedActorValues(actor).maxHp/2);
     fact={id:`auron-rescue:${auron.id}:${count}`,actor:actor.id,rescuer:auron.id,kind:'rescue',
       day:context.day,year:context.year,cause:context.cause,expedition:context.expedition??null,floor:context.floor??null,
-      defeated:true,heartLossPrevented:true,trainingUnlocked:count===1,auronHeartsBefore:before,auronHeartsAfter:before-1,
+      defeated:true,heartLossPrevented:true,trainingUnlocked:!trainingWasUnlocked,auronHeartsBefore:before,auronHeartsAfter:before-1,
       event:`Auron rescued ${actor.data.identity.name} from final-Heart loss (${before} → ${before-1} Hearts).`};
     actor.data.memories??=[];actor.data.memories.push(fact);
     auron.data.memories.push(fact);
@@ -72,9 +72,11 @@ export function deathEvents(world) {
       effects.push({type:'retire',entity:auron.id});
     }
     if(before===2)fact.event+=' Auron lost an arm.';
-    if(count===1)fact.event+=' Training with Auron unlocked.';
+    if(!trainingWasUnlocked)fact.event+=' Training with Auron unlocked.';
     changed.push(auron);
-    const services=economyState(world);services.auronTrainingUnlocked=true;
+    services.auronTrainingUnlocked=true;
+    services.auronTrainingPending=false;
+    services.auronTrainingIntroduced=true;
     effects.push({type:'global',key:'hearthvaleServices',value:services});
     // Only participants have firsthand knowledge. Talk may later inform a
     // legitimate institution; objective rescue truth never broadcasts globally.
@@ -94,7 +96,6 @@ export function deathEvents(world) {
     effects.push({type:'retire',entity:actor.id});
     if(pit.expedition){
       ar.essence=0;actor.data.expeditionHp=0;
-      if(actor.data.statuses)delete actor.data.statuses.poison;
       effects.push({type:'data',entity:'hv_pit_1',key:'lastExpedition',value:{id:pit.expedition.id,
         reason:'death',deepestFloor:pit.expedition.deepestFloor,day:context.day}},
         {type:'data',entity:'hv_pit_1',key:'expedition',value:null});
@@ -108,6 +109,6 @@ export function deathEvents(world) {
     if(JSON.stringify(value)!==JSON.stringify(world.entities[a.id].data[key]))effects.push({type:'data',entity:a.id,key,value});
   effects.push({type:'data',entity:'hv_pit_1',key:'pendingFinalHeart',value:null},
     {type:'data',entity:'hv_pit_1',key:'pendingDeath',value:null},
-    {type:'data',entity:'hv_pit_1',key:'lastResult',value:{actor:actor.id,text:fact.event}});
+    {type:'data',entity:'hv_pit_1',key:'lastResult',value:{actor:actor.id,day:context.day,year:context.year,text:fact.event}});
   return [{type:rescuer?'hearthvale.auron-rescue':'hearthvale.player-death',data:fact,effects}];
 }

@@ -17,11 +17,15 @@ function threatened(g=entered(),hearts=1){
 const lose=g=>use(g,'pit.resolve-room');
 const events=(g,type)=>Object.values(world(g).entities).filter(e=>e.event?.type===type);
 
-test('M5A ordinary 3→2 has no Scar; 2→1 gains contextual Scar and preserves normal Floor recovery',()=>{
+test('M5A ordinary 3→2 has no Scar; 2→1 gains contextual Scar and returns safely to the entrance',()=>{
   let g=threatened(entered(),3);lose(g);
   assert.equal(r(player(g)).hearts,2);assert.equal(player(g).data.scars.length,0);
-  assert.equal(r(player(g)).hp,Math.ceil(derivedActorValues(player(g)).maxHp/2));
-  assert.equal(pit(g).expedition.roomIndex,-1);assert.equal(auron(g).data.rescueCount,undefined);
+  assert.equal(r(player(g)).hp,derivedActorValues(player(g)).maxHp);
+  assert.equal(pit(g).expedition,null);assert.equal(auron(g).data.rescueCount,undefined);
+  assert.equal(player(g).data.statuses.poison,undefined);assert.equal(world(g).globals.hearthvaleServices.auronTrainingPending,true);
+  assert.equal(world(g).globals.hearthvaleServices.auronTrainingUnlocked,true);assert.match(pit(g).lastResult.text,/Training with Auron unlocked/);
+  g.perform('Move',{location:'loc_guild'});assert.equal(world(g).globals.hearthvaleServices.auronTrainingUnlocked,true);
+  assert.equal(world(g).globals.hearthvaleServices.auronTrainingIntroduced,true);
   g=threatened(g,2);const stats=structuredClone(player(g).data.attributes.baseStats);lose(g);
   assert.equal(r(player(g)).hearts,1);assert.equal(player(g).data.scars[0].templateId,'scar_poison_trauma');
   assert.deepEqual(player(g).data.attributes.baseStats,stats);
@@ -102,8 +106,8 @@ test('M5A legacy pending save remains exact on load and explicit adjudication ha
       {type:'data',entity:'hv_pit_1',key:'pendingFinalHeart',value:{actor:player(g).id,expedition:'legacy',cause:'combat',day:1,floor:1}}]})}}}});
   runtime.startScene();runtime.submit({actor:player(g).id,type:'fixture.pending'});runtime.resolveScene({offscreenBudget:0});
   const before=runtime.save(),a=createSurfaceGame({saved:before}),b=createSurfaceGame({saved:before});
-  assert.equal(a.save(),before);a.adjudicateDeath();b.adjudicateDeath();assert.equal(a.save(),b.save());
-  const after=a.save();a.adjudicateDeath();assert.equal(a.save(),after);
+  assert.equal(a.save(),before);a.adjudicateDeath();b.resumeFlow();assert.equal(a.save(),b.save());
+  const after=a.save();a.adjudicateDeath();b.resumeFlow();assert.equal(a.save(),after);assert.equal(b.save(),after);
   assert.equal(events(a,'hearthvale.auron-rescue').length,1);
 });
 

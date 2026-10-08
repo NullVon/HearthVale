@@ -3,7 +3,7 @@ export function addDialogue(c){
   c.texts.push({id:'text_lina_square',label:'Lina on Sunken Square',text:'Sunken Square is in the record now. We can keep its finder and date together.'});
   c.dialogues.push({id:'dialogue_lina_square',label:'Lina on Sunken Square',actor:'actor_lina',voice:'voice_lina',priority:'history',requires:[],forbids:[],knowledge:[{subject:'loc_sunken_square',tag:'info_discovery',state:'Known'}],text:'text_lina_square',once:true,pool:'lina_history'});
   const lines={
-    auron:['Keep enough strength for the way back.','Check your grip before you blame the blade.'],
+    auron:['They call me the Guardian Adventurer. Helping people prepare for the Pit is part of that work.','A first loss need not be your last descent. Training gives you something to carry back down.'],
     rook:['A short trip can still pay. Timing helps.','I like an opportunity that leaves me time for supper.'],
     mira:['Eat something before you go. You make poor decisions hungry.','Sit down a moment. The Pit can wait.'],
     tavi:['Bring me a sample, not just a description. Then we can work with it.','I found room on the shelf. That is practically an invitation.'],

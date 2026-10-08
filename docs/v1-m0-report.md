@@ -1,5 +1,8 @@
 # HearthVale V1 M0 completion report
 
+> Historical revision record. Rules, completion status, and test counts describe this revision; see [documentation guide](README.md) for later corrections and current verification.
+
+
 M0 technical foundation is complete. All existing and new tests pass. No production M1 gameplay or UI was implemented. Changes remain in the working trees; no commits or publication were requested.
 
 ## Architecture and reuse

@@ -17,6 +17,8 @@ export const miraResponses = [
   { id: 'looking', label: 'Just looking around first.', reply: 'Probably the smarter start.' },
 ];
 export const miraClosing = [
+  'Mira: “If you start seeing things down there, come back up. Talk to somebody — me, or the people at the Guild. An ordinary conversation can help you feel grounded.”',
+  'SANITY — Talking with people helps you recover. Your first ordinary conversation each day restores 1 Sanity if you are below maximum. Sleeping restores HP, but does not restore Sanity.',
   'Mira: “Shop’s nearby. Guild’s down the road. Town Hall’s impossible to miss.”',
   'Mira: “When you’re done for the Day, come back here and get some sleep.”',
 ];
@@ -30,8 +32,8 @@ export const locationDescriptions = {
 
 export const traitDescriptions = Object.freeze({
   "trait_hardy": "+2 Max HP; +2 CON on physical-resilience/endurance checks.",
-  "trait_frail": "−2 Max HP; −2 physical-resilience CON; recover 1 Sanity after 4 Talks instead of 5.",
-  "trait_quick": "+2 Dodge and escape/reactive DEX checks; no Bow accuracy bonus.",
+  "trait_frail": "−2 Max HP; −2 physical-resilience CON.",
+  "trait_quick": "+2 escape/reactive DEX checks. Combat Dodge uses DEX and attack Speed; Quick adds no combat bonus.",
   "trait_strong_willed": "+2 WIS against Fear, coercion, Sanity pressure and mental effects.",
   "trait_charming": "+2 CHA for warmth, trust, cooperation and positive first impressions.",
   "trait_off_putting": "−2 CHA for warmth/cooperation; +2 for intimidation or deterrence.",

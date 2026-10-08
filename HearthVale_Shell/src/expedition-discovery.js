@@ -10,17 +10,9 @@ export function routeFloor(ctx, number, attempt, prefix, rng) {
     if(!ctx.pit.sunkenSquare.known) ctx.pit.sunkenSquare.floor=number;
     // A named Room counts toward the ordinary count and family constraints.
     const first={id:`square_${number}_${attempt}`,templateId:'loc_sunken_square',encounter:'loc_sunken_square',family:'discovery',title:'Sunken Square',resolved:false};
-    // If the previous Floor ends with two discoveries, use one ordinary Room
-    // before the Square, retaining both the count and cross-Floor constraint.
-    if(prefix.at(-1)==='discovery' && prefix.at(-2)==='discovery') {
-      const floor=generateFloor(number,attempt,prefix,rng);
-      floor.rooms[1]=first;
-      if(floor.rooms[2]?.family==='discovery') floor.rooms[2].family='empty',floor.rooms[2].encounter='square_quiet_lane',floor.rooms[2].title='Quiet Lane';
-      return floor;
-    }
-    return generateFloor(number,attempt,prefix,rng,first);
+    return generateFloor(number,attempt,prefix,rng,first,ctx.pit,ctx.actor?.data.attributes.resources.sanity);
   }
-  return generateFloor(number,attempt,prefix,rng);
+  return generateFloor(number,attempt,prefix,rng,null,ctx.pit,ctx.actor?.data.attributes.resources.sanity);
 }
 export function resolveSquare(ctx) {
   const square=ctx.pit.sunkenSquare;

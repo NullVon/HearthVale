@@ -13,7 +13,7 @@ export function autonomousPitChoices(world,actor,claimed=new Set()) {
     ||actor.primaryLocation===world.entities[surface.playerId].primaryLocation||!(r?.hp>0&&r.hearts>0)
     ||services.has(actor.data.templateId)||!pitGoals.has(actor.data.mainGoal)
     ||!['loc_guild','loc_pit_entrance'].includes(actor.primaryLocation)||pit.expedition?.active
-    ||!actor.data.inventory?.equipped.some(i=>byId('items',i?.templateId)?.category==='weapon'&&i.durability>0
+    ||!actor.data.inventory?.equipped.some(i=>byId('items',i?.templateId)?.category==='weapon'&&(!byId('items',i.templateId).maxDurability||i.durability>0)
       &&(byId('items',i.templateId).ammo!=='item_arrows'||r.arrows>0)))return [];
   const depth=Math.max(pit.deepestReachedFloor??0,pit.lastExpedition?.deepestFloor??0);
   const square=pit.sunkenSquare,choices=[];

@@ -1,5 +1,8 @@
 # HearthVale foundation assessment
 
+> Historical revision record. Rules, completion status, and test counts describe this revision; see [documentation guide](README.md) for later corrections and current verification.
+
+
 Milestone 4 update: [succession and continuity are now proven](milestone-4-report.md) using the accepted Core operation with no further Core changes. All 47 HearthVale tests, 64 Core regressions, and four diagnostic CLIs pass. The statements below about deferred succession are historical milestone assessments; the current implementation includes prepared checkpoints, immediate and compressed succession, scoped recipient selection, and post-transfer routing refresh. Production Content/Story/UI remain unimplemented.
 
 Post-Milestone 3 update: the separately authorized [controller-transfer review](core-controller-transfer-gap.md) confirmed and resolved the generic controller/opportunity-transfer gap in unreleased Core changes. All 64 Core tests and 38 unchanged HearthVale tests pass. The historical assessments below describe the gap at their original milestones. Milestone 4 is now unblocked on that capability; succession itself remains unimplemented, and Shell routing must be refreshed when control changes.
@@ -12,7 +15,7 @@ Milestones 1–3 use LWE Core v0.1.0 without Core changes. The original bootstra
 
 Inspected Core at commit `2933f67` (`chore: prepare LWE Core v0.1.0`): its public API, all six pillar implementations, persistence, implementation guidance, fixtures, and tests. Read the Core Contracts v1 and Six Pillars v1 Word records and the supplied HearthVale Six Pillars and Architecture Contracts v1 Word records. The attached task brief defines this pass's scope; document design statements are architectural reference material, not independent authorization to implement every described mechanic.
 
-No AGENTS.md was found in the workspace. Core and the new HearthVale had clean Git working trees. The parent is a container, not a repository. The new HearthVale contained only README.md. Conventions are dependency-free JavaScript ES modules, Node >=22, and node:test. No hosting configuration or existing UI needs extending.
+Core and the new HearthVale had clean Git working trees. The parent is a container, not a repository. The new HearthVale contained only README.md. Conventions are dependency-free JavaScript ES modules, Node >=22, and node:test. No hosting configuration or existing UI needs extending.
 
 The [Master Design Handoff](HearthVale_Master_Design_Handoff.md) was supplied and read after the bootstrap assessment. It is authoritative for intended game, mechanics, tone, content direction, and prior design decisions wherever compatible with the newer contracts. Legacy inspection was limited to its README and package metadata: these describe an earlier LWE adapter/playtest despite the PreLWE directory name. Nothing is copied or imported from it.
 

@@ -4,18 +4,21 @@ import { currentRoom } from './expedition-generation.js';
 import { derivedActorValues } from './surface-candidates.js';
 import { definitionOf, resources, spellCost, canUseBag, useBag, swap, learn } from './expedition-equipment.js';
 import { enterExpedition, forward, retreat, requestReturn, finishExpeditionAction } from './expedition-lifecycle.js';
-import { attackWeapon, castCombatSpell, movePlayer, defend, nextCombatPhase } from './expedition-combat.js';
+import { attackWeapon, attackUnarmed, castCombatSpell, defend, nextCombatPhase, canAttackWith, combatPhase, immediateAction, resumeCombat } from './expedition-combat.js';
 import { resolveRoom, explorationSpell } from './expedition-rooms.js';
 import { settleLoot } from './expedition-loot.js';
 import { eventChoices } from './expedition-events.js';
 import { startCombat } from './expedition-combat.js';
+import { castCombatScroll } from './expedition-combat.js';
+import { canCastCombatScroll,scrollSpell } from './scroll-magic.js';
 import { squareEntityEffects, squareInformation } from './expedition-discovery.js';
 import { knowledgeState } from './information.js';
+import { economyState } from './economy.js';
 
 function usableSpell(actor, expedition, spell, scroll = false) {
   if (!spell || (!scroll && resources(actor).essence < spellCost(actor, expedition, spell))) return false;
   const combat = expedition.combat;
-  if (combat) return combat.phase === 'attack' && !spell.explorationOnly
+  if (combat) return (combatPhase(combat) === 'attack' || immediateAction(combat) && spell.target === 'enemy') && !spell.explorationOnly
     && (spell.id !== 'spell_heal' || resources(actor).hp < derivedActorValues(actor).maxHp)
     && (spell.id !== 'spell_barrier' || !combat.barrier);
   if (spell.id === 'spell_heal') return resources(actor).hp < derivedActorValues(actor).maxHp;
@@ -48,13 +51,14 @@ export function expeditionChoices(world) {
     return choices;
   }
   if (combat) {
-    if (combat.phase === 'incoming') {
-      if (!combat.committed.offensive || combat.committed.range !== combat.range) add('pit.defend', 'Resolve committed enemy move', { mode: 'none' }, 'defense');
+    if (combatPhase(combat) === 'incoming') {
+      if (!combat.committed.offensive) add('pit.defend', 'Resolve legacy nonoffensive move', { mode: 'none' }, 'defense');
       else {
         add('pit.defend', 'Dodge', { mode: 'dodge' }, 'defense');
         inventory.equipped.forEach((item, slot) => {
           if (definitionOf(item)?.canDefend && item.durability > 0) add('pit.defend', `Block with ${definitionOf(item).label}`, { mode: 'block', slot }, 'defense');
         });
+        add('pit.defend', 'Counterattack', { mode: 'counter' }, 'defense');
       }
       return choices;
     }
@@ -64,11 +68,12 @@ export function expeditionChoices(world) {
     }
     inventory.equipped.forEach((item, slot) => {
       const definition = definitionOf(item);
-      if (definition?.category === 'weapon' && item.durability > 0 && definition.range === combat.range
-        && (!definition.ammo || resources(actor).arrows > 0)) add('pit.attack', `Attack: ${definition.label} (DUR ${item.durability})`, { slot }, 'weapons');
+      if (canAttackWith(actor, combat, item)) add('pit.attack', `Attack: ${definition.label} (${definition.ammo ? '1 Arrow' : `DUR ${item.durability}`})`, { slot }, 'weapons');
     });
-    add('pit.move', `Move to ${combat.range === 'NEAR' ? 'FAR' : 'NEAR'}`, {}, 'combat');
-    if (combat.kind === 'room') add('pit.retreat', 'Retreat to Floor start', {}, 'combat');
+    add('pit.unarmed', 'Bare Hands — Damage 1 · Speed 0', {}, 'combat');
+    if (combatPhase(combat) === 'attack') {
+      if (combat.kind === 'room') add('pit.retreat', 'Retreat to Floor start', {}, 'combat');
+    }
   } else {
     if(room?.family==='fixed' && pit.data.strata[0].guardian.alive) add('pit.guardian','Face the Ruin Brute');
     if (expedition.roomIndex < 0 || room?.resolved && expedition.floor.number < 10) add('pit.forward', expedition.lastResult?.discovery?'Continue':'Forward');
@@ -86,9 +91,13 @@ export function expeditionChoices(world) {
     }
     add('pit.return', 'Return to entrance', {}, 'return');
   }
-  // Only the Player Attack phase or out-of-combat exploration reaches here.
+  // Ordinary attacks retain free consumables. Immediate response phases expose
+  // only enemy-targeted offense, with the same costs and resource checks.
   inventory.bag.forEach((item, slot) => {
-    if (canUseBag(actor, slot)) add('pit.use', `Use ${definitionOf(item).label} ×${item.quantity} (free)`, { slot }, 'bag');
+    const spell=scrollSpell(item);
+    if(item?.quantity>0&&(combat?canCastCombatScroll(actor,combat,item,combatPhase(combat)):usableSpell(actor,expedition,spell,true)))
+      add('pit.scroll',`Use ${definitionOf(item).label} ×${item.quantity}${combat?' — 1 action':''}`,{container:'bag',slot,id:item.id},'bag');
+    if ((!combat || !immediateAction(combat)) && canUseBag(actor, slot)) add('pit.use', `Use ${definitionOf(item).label} ×${item.quantity} (free)`, { slot }, 'bag');
     if (!combat && definitionOf(item)?.category === 'tome' && !inventory.spells.includes(definitionOf(item).spell)) {
       const empty = inventory.spells.indexOf(null);
       (empty >= 0 ? [empty] : [0, 1, 2, 3]).forEach(spellSlot => add('pit.learn', `Learn ${byId('spells', definitionOf(item).spell).label}${empty >= 0 ? '' : `; replace ${byId('spells', inventory.spells[spellSlot]).label}`}`, { bag: slot, slot: spellSlot }, 'bag'));
@@ -100,9 +109,10 @@ export function expeditionChoices(world) {
   });
   inventory.equipped.forEach((item, slot) => {
     const definition = definitionOf(item), spell = definition?.category === 'scroll' ? byId('spells', definition.spell) : null;
-    if (usableSpell(actor, expedition, spell, true)) add('pit.scroll', `Use ${definition.label} (free)`, { slot }, 'weapons');
+    if(item?.quantity>0&&(combat?canCastCombatScroll(actor,combat,item,combatPhase(combat)):usableSpell(actor, expedition, spell, true)))
+      add('pit.scroll',`Use ${definition.label} ×${item.quantity}${combat?' — 1 action':''}`,{slot},'bag');
     inventory.bag.forEach((bagItem, bag) => {
-      if ((bagItem || item) && (!bagItem || ['weapon', 'shield', 'scroll'].includes(definitionOf(bagItem).category)))
+      if ((!combat || combatPhase(combat) === 'attack') && (bagItem || item) && (!bagItem || ['weapon', 'shield'].includes(definitionOf(bagItem).category)))
         add('pit.swap', `Equipped ${slot + 1} ↔ Bag ${bag + 1}: ${definitionOf(bagItem)?.label ?? 'Empty'}`,
           { equipped: slot, bag }, 'swap');
     });
@@ -119,14 +129,19 @@ function resolveIntention(ctx, type, params, rng) {
     case 'pit.return': requestReturn(ctx, rng); break;
     case 'pit.retreat': retreat(ctx, rng); break;
     case 'pit.attack': attackWeapon(ctx, params.slot, rng); break;
-    case 'pit.move': movePlayer(ctx); break;
+    case 'pit.unarmed': attackUnarmed(ctx, rng); break;
     case 'pit.defend': defend(ctx, params.mode, params.slot, rng); break;
     case 'pit.combat-next': nextCombatPhase(ctx, rng); break;
-    case 'pit.cast': case 'pit.scroll': {
-      const scroll = type === 'pit.scroll', inventory = ctx.actor.data.inventory;
-      const id = scroll ? definitionOf(inventory.equipped[params.slot]).spell : inventory.spells[params.slot];
+    case 'pit.scroll': {
+      const container=params.container??'equipped',spell=scrollSpell(ctx.actor.data.inventory[container][params.slot]);
+      if(ctx.expedition.combat)castCombatScroll(ctx,container,params.slot,rng);
+      else explorationSpell(ctx,spell.id,rng,params.slot,container);
+      break;
+    }
+    case 'pit.cast': {
+      const id = ctx.actor.data.inventory.spells[params.slot];
       const cast = ctx.expedition.combat ? castCombatSpell : explorationSpell;
-      cast(ctx, id, rng, scroll ? params.slot : null); break;
+      cast(ctx, id, rng); break;
     }
     case 'pit.use': ctx.expedition.lastResult = useBag(ctx.actor, params.slot, rng); break;
     case 'pit.learn': ctx.expedition.lastResult = learn(ctx.actor, params.bag, params.slot); break;
@@ -140,7 +155,7 @@ function resolveIntention(ctx, type, params, rng) {
 }
 
 const sameParams = (a, b) => Object.keys(a).length === Object.keys(b).length && Object.keys(a).every(key => a[key] === b[key]);
-const types = ['enter','guardian','forward','resolve-room','return','retreat','attack','move','defend','combat-next','cast','scroll','use','learn','swap','loot'];
+const types = ['enter','guardian','forward','resolve-room','return','retreat','attack','unarmed','defend','combat-next','cast','scroll','use','learn','swap','loot'];
 export const expeditionActions = Object.fromEntries(types.map(name => {
   const type = `pit.${name}`;
   return [type, {
@@ -148,9 +163,13 @@ export const expeditionActions = Object.fromEntries(types.map(name => {
       && expeditionChoices(world).some(choice => choice.type === type && sameParams(choice.params, attempt.params)),
     resolve: ({ world, attempt }, { rng }) => {
       const originalActor = world.entities[attempt.actor], originalPit = world.entities.hv_pit_1;
-      const actor = structuredClone(originalActor), pit = structuredClone(originalPit.data);
-      const ctx = { world,actor, pit, pitId: originalPit.id, expedition: pit.expedition, day: world.globals.hearthvaleSurface.calendar.day,year:world.globals.hearthvaleSurface.calendar.year };
+      const actor = structuredClone(originalActor), pit = structuredClone(originalPit.data), services = economyState(world);
+      const ctx = { world,actor, pit, services, pitId: originalPit.id, expedition: pit.expedition, day: world.globals.hearthvaleSurface.calendar.day,year:world.globals.hearthvaleSurface.calendar.year };
+      if (ctx.expedition?.combat) resumeCombat(ctx.expedition.combat);
       resolveIntention(ctx, type, attempt.params, rng);
+      if(type==='pit.resolve-room'&&ctx.expedition?.lastResult.discovery
+        &&knowledgeState(world,actor.id,originalPit.id,'discovery-loc_sunken_square')!=='Known')
+        ctx.expedition.lastResult.text+=' Future expeditions can enter via Sunken Square from the Pit Entrance.';
       finishExpeditionAction(ctx, rng);
       const effects = [];
       effects.push(...squareEntityEffects(world,pit));
@@ -159,6 +178,8 @@ export const expeditionActions = Object.fromEntries(types.map(name => {
       for (const [entity, before, after] of [[actor.id, originalActor.data, actor.data], [originalPit.id, originalPit.data, pit]])
         for (const key of Object.keys(after)) if (JSON.stringify(after[key]) !== JSON.stringify(before[key]))
           effects.push({ type: 'data', entity, key, value: after[key] });
+      if (JSON.stringify(services) !== JSON.stringify(world.globals.hearthvaleServices))
+        effects.push({ type: 'global', key: 'hearthvaleServices', value: services });
       if (actor.primaryLocation !== originalActor.primaryLocation) effects.push({ type: 'move', entity: actor.id, location: actor.primaryLocation });
       for (const id of pit.knownEnemies ?? []) if (!(originalPit.data.knownEnemies ?? []).includes(id)) effects.push({ type: 'learn', actor: actor.id,
         claim: { subject: originalPit.id, key: `known-enemy-${id}`, value: id } });

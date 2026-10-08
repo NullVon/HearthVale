@@ -56,11 +56,11 @@ async function run(){
         await load(name);disclosures();measure(`${width} ${name}`);
         if(name==='Rook resolved')check(doc().body.textContent.includes('Completed by Rook'),'Actual Rook resolver missing');
         if(name==='Combat'){
-          saveRoundTrip('Combat');click('pit-tab','spells');measure(`${width} combat spells`);click('pit-tab','bag');disclosures();measure(`${width} combat Bag`);click('pit-tab','weapons');
+          saveRoundTrip('Combat');check(doc().querySelector('[data-command="pit-tab"][data-value="spells"]'),'Normal Mode missing learned spells');click('pit-tab','bag');disclosures();measure(`${width} combat Items`);click('pit-tab','weapons');
           const before=localStorage.getItem(auto);intent('pit.retreat');measure(`${width} Retreat confirmation`);click('cancel-action');check(localStorage.getItem(auto)===before,'Cancel Retreat mutated world');
           intent('pit.attack');measure(`${width} attack result`);
           const defensive=[...doc().querySelectorAll('[data-command="expedition"]')].some(b=>JSON.parse(b.dataset.value).type==='pit.defend');
-          intent(defensive?'pit.defend':'pit.combat-next');measure(`${width} combat result`);
+          if(defensive)intent('pit.defend');measure(`${width} combat result`);
         }
         if(['resource','hazard','treasure','event','empty','discovery','Sunken Square'].includes(name)){
           intent('pit.resolve-room');measure(`${width} ${name} result`);saveRoundTrip(name);
